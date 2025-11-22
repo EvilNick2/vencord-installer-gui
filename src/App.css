@@ -74,7 +74,12 @@ h2 {
   border-radius: 4px;
   border: 1px solid #303030;
   background: #292929;
+  cursor: pointer;
+}
+
+.actions button:disabled {
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .logs-box {
@@ -111,4 +116,70 @@ h2 {
 
 .error {
   color: #c00;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.text-input,
+.text-area {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+}
+
+.text-area {
+  resize: vertical;
+}
+
+.status-text {
+  margin-top: 8px;
+}
+
+.repo-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.repo-list-item {
+  border: 1px solid #e1e1e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.repo-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.repo-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.repo-title {
+  font-weight: 600;
+}
+
+.repo-url {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.repo-description {
+  margin: 2px 0 0 0;
+  color: #333;
 }

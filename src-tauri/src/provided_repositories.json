@@ -1,0 +1,114 @@
+[
+  {
+    "id": "dontleak",
+    "name": "DontLeak",
+    "url": "https://github.com/pernydev/DontLeak.git",
+    "description": "Hides DMs whilst screensharing to prevent leaking",
+    "defaultEnabled": true
+  },
+  {
+    "id": "narrator-custom",
+    "name": "Narrator Custom",
+    "url": "https://github.com/nyakowint/vcNarrator-custom.git",
+    "description": "Custom narrator options for Vencord using TikTok TTS voices",
+    "defaultEnabled": true
+  },
+  {
+    "id": "timezones",
+    "name": "Timezones",
+    "url": "https://github.com/Syncxv/vc-timezones.git",
+    "description": "Shows timezones for users",
+    "defaultEnabled": true
+  },
+  {
+    "id": "message-logger-enhanced",
+    "name": "Message Logger Enhanced",
+    "url": "https://github.com/Syncxv/vc-message-logger-enhanced.git",
+    "description": "Message logger that stores messages in persistant storage",
+    "defaultEnabled": true
+  },
+  {
+    "id": "better-activities",
+    "name": "Better Activities",
+    "url": "https://github.com/D3SOX/vc-betterActivities.git",
+    "description": "Shows activity icons in the member list and allows showing all activities",
+    "defaultEnabled": true
+  },
+  {
+    "id": "block-krisp",
+    "name": "Block Krisp",
+    "url": "https://github.com/D3SOX/vc-blockKrisp.git",
+    "description": "Prevent Krisp from loading",
+    "defaultEnabled": true
+  },
+  {
+    "id": "follow-user",
+    "name": "Follow User",
+    "url": "https://github.com/D3SOX/vc-followUser.git",
+    "description": "Adds a follow option in the user context menu to always be in the same VC as them",
+    "defaultEnabled": true
+  },
+  {
+    "id": "ignore-terms",
+    "name": "Ignore Terms",
+    "url": "https://github.com/D3SOX/vc-ignoreTerms.git",
+    "description": "Ignore Discord's new terms of service",
+    "defaultEnabled": true
+  },
+  {
+    "id": "media-playback-speed",
+    "name": "Media Playback Speed",
+    "url": "https://github.com/D3SOX/vc-mediaPlaybackSpeed.git",
+    "description": "Allows changing the (default) playback speed of media embeds",
+    "defaultEnabled": true
+  },
+  {
+    "id": "notify-user-changes",
+    "name": "Notify User Changes",
+    "url": "https://github.com/D3SOX/vc-notifyUserChanges.git",
+    "description": "Adds a notify option in the user context menu to get notified when a user changes voice channels or online status",
+    "defaultEnabled": true
+  },
+  {
+    "id": "silent-typing-enhanced",
+    "name": "Silent Typing Enhanced",
+    "url": "https://github.com/D3SOX/vc-silentTypingEnhanced.git",
+    "description": "Hide typing indicator for yourself with support for enable per guild/user",
+    "defaultEnabled": true
+  },
+  {
+    "id": "voice-chat-utilities",
+    "name": "Voice Chat Utilities",
+    "url": "https://github.com/D3SOX/vc-voiceChatUtilities.git",
+    "description": "Allows you to perform multiple actions on an entire channel (move, mute, disconnect, etc.)",
+    "defaultEnabled": true
+  },
+  {
+    "id": "steam-status-sync",
+    "name": "Steam Status Sync",
+    "url": "https://github.com/hauntii/vencord-steamStatusSync.git",
+    "description": "Sync Discord status with Steam",
+    "defaultEnabled": true
+  },
+  {
+    "id": "keyboard-sounds",
+    "name": "Keyboard Sounds",
+    "url": "https://github.com/EvilNick2/keyboardSounds.git",
+    "description": "Add keyboard typing sounds, uses sounds packs from Opera GX",
+    "defaultEnabled": true
+  },
+  {
+    "id": "whos-watching",
+    "name": "Who's Watching",
+    "url": "https://github.com/fres621/vencord-whos-watching.git",
+    "description": "See who is watching your screenshare",
+    "defaultEnabled": true
+  },
+  {
+    "id": "holynotes",
+    "name": "HolyNotes",
+    "url": "https://github.com/WolfPlugs/HolyNotes-VC.git",
+    "description": "Save messages locally to collections",
+    "defaultEnabled": true
+  }
+]
