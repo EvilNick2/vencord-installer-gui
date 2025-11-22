@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{collections::{HashMap}, fs, path::PathBuf};
 
-const DEFAULT_VENCORD_REPO_URL: &str = "https://github.com/Vendicated/Vencord";
+const DEFAULT_VENCORD_REPO_URL: &str = "https://github.com/Vendicated/Vencord.git";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
