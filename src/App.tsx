@@ -156,25 +156,24 @@ function SettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const onSave = async () => {
-    if (!options) return;
-
+  const saveOptions = async (
+    nextOptions: UserOptions,
+    { syncUserReposText }: { syncUserReposText: boolean },
+  ) => {
     setSaving(true);
     setError(null);
     setMessage(null);
 
-    const repoList = userReposText
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-      
-    try {
-      const updated = await updateUserOptions({
-        ...options,
-        userRepositories: repoList,
-      });
+    setOptions(nextOptions);
 
+    try {
+      const updated = await updateUserOptions(nextOptions);
       setOptions(updated);
+
+      if (syncUserReposText) {
+        setUserReposText(updated.userRepositories.join("\n"));
+      }
+
       setMessage('Options saved');
     } catch (err) {
       setError(String(err));
@@ -182,6 +181,35 @@ function SettingsPage() {
       setSaving(false);
     }
   };
+
+  const onSave = async () => {
+    if (!options) return;
+
+    const repoList = userReposText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+    const nextOptions = {
+      ...options,
+      userRepositories: repoList,
+    };
+
+    await saveOptions(nextOptions , { syncUserReposText: true });
+  }
+
+  const onToggleProvidedRepo = async (id: string) => {
+    if (!options || saving) return;
+
+    const nextOptions: UserOptions = {
+      ...options,
+      providedRepositories: options.providedRepositories.map((entry) =>
+        entry.id === id ? { ...entry, enabled: !entry.enabled } : entry
+      ),
+    };
+
+    await saveOptions(nextOptions, { syncUserReposText: false });
+  }
 
   return (
     <section>
@@ -213,14 +241,8 @@ function SettingsPage() {
                       <input
                         type='checkbox'
                         checked={repo.enabled}
-                        onChange={() =>
-                          setOptions({
-                            ...options,
-                            providedRepositories: options.providedRepositories.map((entry) =>
-                              entry.id === repo.id ? { ...entry, enabled: !repo.enabled } : entry
-                            ),
-                          })
-                        }
+                        disabled={saving}
+                        onChange={() => onToggleProvidedRepo(repo.id)}
                       />
                       <div className='repo-meta'>
                         <div className='repo-title'>{repo.name}</div>
