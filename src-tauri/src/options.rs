@@ -1,7 +1,7 @@
 use log::warn;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{collections::{HashMap}, fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 const DEFAULT_VENCORD_REPO_URL: &str = "https://github.com/Vendicated/Vencord.git";
 
@@ -20,7 +20,7 @@ static PROVIDED_REPOSITORIES: Lazy<Vec<ProvidedRepository>> = Lazy::new(|| {
       .expect("Failed to parse provided_repositories.json")
 });
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProvidedRepositoryState {
   pub id: String,
@@ -51,15 +51,17 @@ pub struct OptionsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct UserOptions {
   pub vencord_repo_url: String,
+  pub vencord_repo_url_default: Option<String>,
   pub user_repositories: Vec<String>,
   #[serde(default)]
-  pub provided_repositories: Vec<ProvidedRepositoryState>
+  pub provided_repositories: Vec<ProvidedRepositoryState>,
 }
 
 impl Default for UserOptions {
   fn default() -> Self {
     Self {
       vencord_repo_url: DEFAULT_VENCORD_REPO_URL.to_string(),
+      vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
       user_repositories: Vec::new(),
       provided_repositories: PROVIDED_REPOSITORIES
           .iter()
@@ -90,13 +92,56 @@ fn save_options(options: &UserOptions) -> Result<(), String> {
   fs::write(path, json).map_err(|err| format!("Failed to write options file: {err}"))
 }
 
+fn reconcile_options(mut options: UserOptions) -> Result<UserOptions, String> {
+  let mut updated = false;
+
+  let current_default_url = DEFAULT_VENCORD_REPO_URL.to_string();
+  let saved_default_url = options
+    .vencord_repo_url_default
+    .clone()
+    .unwrap_or_else(|| current_default_url.clone());
+
+  if saved_default_url != current_default_url {
+    if options.vencord_repo_url == saved_default_url {
+      options.vencord_repo_url = current_default_url.clone();
+    }
+
+    options.vencord_repo_url_default = Some(current_default_url.clone());
+    updated = true;
+  }
+
+  let provided: Vec<ProvidedRepositoryState> = PROVIDED_REPOSITORIES
+    .iter()
+    .map(|repo| ProvidedRepositoryState {
+      id: repo.id.clone(),
+      enabled: options
+        .provided_repositories
+        .iter()
+        .find(|entry| entry.id == repo.id)
+        .map(|entry| entry.enabled)
+        .unwrap_or(repo.default_enabled),
+    })
+    .collect();
+
+  if provided != options.provided_repositories {
+    options.provided_repositories = provided;
+    updated = true;
+  }
+
+  if updated {
+    save_options(&options)?;
+  }
+
+  Ok(options)
+}
+
 fn load_options() -> Result<UserOptions, String> {
   let path = options_path()?;
 
   if path.exists() {
     match fs::read_to_string(&path) {
       Ok(content) => match serde_json::from_str::<UserOptions>(&content) {
-        Ok(opts) => return Ok(opts),
+        Ok(opts) => return reconcile_options(opts),
         Err(err) => warn!("Failed to parse options file, resetting to defaults: {err}"),
       },
       Err(err) => warn!("Failed to read options file, resetting to defaults: {err}"),
@@ -109,8 +154,10 @@ fn load_options() -> Result<UserOptions, String> {
 }
 
 fn merge_provided_repositories(saved: &[ProvidedRepositoryState]) -> Vec<ProvidedRepositoryView> {
-  let saved_map: HashMap<String, bool> =
-      saved.iter().map(|entry| (entry.id.clone(), entry.enabled)).collect();
+  let saved_map: HashMap<String, bool> = saved
+    .iter()
+    .map(|entry| (entry.id.clone(), entry.enabled))
+    .collect();
 
   PROVIDED_REPOSITORIES
       .iter()
@@ -143,8 +190,8 @@ fn to_response(options: UserOptions) -> OptionsResponse {
 fn to_storage(options: OptionsResponse) -> UserOptions {
   let valid_ids: HashMap<_, _> = PROVIDED_REPOSITORIES
       .iter()
-      .map(|repo| (repo.id.clone(), repo.default_enabled)).
-      collect();
+      .map(|repo| (repo.id.clone(), repo.default_enabled))
+      .collect();
 
   let provided_repositories = options
       .provided_repositories
@@ -158,6 +205,7 @@ fn to_storage(options: OptionsResponse) -> UserOptions {
 
   UserOptions {
     vencord_repo_url: options.vencord_repo_url,
+    vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
     user_repositories: options.user_repositories,
     provided_repositories,
   }
