@@ -1,22 +1,62 @@
 :root {
+  color-scheme: light dark;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
+  --app-bg: #f5f6fa;
+  --sidebar-bg: #eef0f5;
+  --surface: #ffffff;
+  --secondary-furface: #f1f2f6;
+  --text: #0b1021;
+  --muted: #4b5563;
+  --border: #d8dbe4;
+  --button-bg: #e7e9f0;
+  --button-hover: #dfe2eb;
+  --button-border: #c8ccda;
+  --button-text: #0b1021;
+  --input-bg: #ffffff;
+  --input-border: #cfd4df;
+  --input-text: #0b1021;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: #0d1117;
+    --sidebar-bg: #0f141e;
+    --surface: #131a24;
+    --secondary-furface: #0f1622;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #242c3a;
+    --button-bg: #1f2937;
+    --button-hover: #273142;
+    --button-border: #2f394a;
+    --button-text: #e5e7eb;
+    --input-bg: #0f141e;
+    --input-border: #2a3242;
+    --input-text: #e5e7eb;
+  }
 }
 
 body {
   margin: 0;
+  background: var(--app-bg);
+  color: var(--text);
+  min-height: 100vh;
 }
 
 .app-root {
   display: flex;
   height: 100vh;
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 .sidebar {
   width: 220px;
   padding: 16px;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--border);
   box-sizing: border-box;
+  background: var(--app-bg);
 }
 
 .app-title {
@@ -30,16 +70,26 @@ body {
   gap: 8px;
 }
 
-.sidebar button {
+.sidebar button,
+.actions button {
   padding: 8px 10px;
   border-radius: 4px;
-  border: 1px solid #303030;
-  background: #292929;
+  border: 1px solid var(--border);
+  background: var(--app-bg);
+  color: var(--button-text);
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.sidebar button:hover {
-  background: #e5e5e5;
+.sidebar button:hover,
+.actions button:hover {
+  background: var(--button-hover);
+}
+
+.sidebar button:disabled,
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .content {
@@ -54,10 +104,11 @@ h2 {
 }
 
 .card {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 16px;
+  background: var(--surface);
 }
 
 .card h3 {
@@ -69,27 +120,14 @@ h2 {
   gap: 8px;
 }
 
-.actions button {
-  padding: 8px 16px;
-  border-radius: 4px;
-  border: 1px solid #303030;
-  background: #292929;
-  cursor: pointer;
-}
-
-.actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
 .logs-box {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px;
   height: 260px;
   overflow: auto;
-  background: #111;
-  color: #eee;
+  background: var(--secondary-furface);
+  color: var(--text);
 }
 
 .install-list {
@@ -111,11 +149,11 @@ h2 {
 .install-path {
   font-family: monospace;
   font-size: 12px;
-  opacity: 0.8;
+  color: var(--muted);
 }
 
 .error {
-  color: #c00;
+  color: #ef4444;
 }
 
 .form-field {
@@ -129,14 +167,20 @@ h2 {
 .text-area {
   padding: 8px 10px;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   font-size: 14px;
   font-family: inherit;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--input-text);
 }
 
 .text-area {
   resize: vertical;
+}
+
+small,
+.repo-description {
+  color: var(--muted);
 }
 
 .status-text {
@@ -153,7 +197,7 @@ h2 {
 }
 
 .repo-list-item {
-  border: 1px solid #e1e1e1;
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
 }
@@ -177,9 +221,4 @@ h2 {
 .repo-url {
   font-family: monospace;
   font-size: 12px;
-}
-
-.repo-description {
-  margin: 2px 0 0 0;
-  color: #333;
 }
