@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getDiscordInstalls, getUserOptions, updateUserOptions } from './api';
 import type { DiscordInstall, UserOptions } from './api';
 import './App.css'
@@ -7,16 +7,35 @@ type Page = 'home' | 'install' | 'logs' | 'settings';
 
 function App() {
   const [page, setPage] = useState<Page>('home');
+  const settingsPendingRef = useRef(false);
+
+  const updateSettingsPending = (pending: boolean) => {
+    settingsPendingRef.current = pending;
+  }
+
+  const handleNavigate = (nextPage: Page) => {
+    if (page === 'settings' && nextPage !== 'settings' && settingsPendingRef.current) {
+      const confirmLeave = window.confirm(
+        'You have unsaved changed in settings. Leave without saving?'
+      );
+
+      if (!confirmLeave) {
+        return;
+      }
+    }
+
+    setPage(nextPage);
+  };
 
   return (
     <div className='app-root'>
       <aside className='sidebar'>
         <h1 className='app-title'>Vencord Installer</h1>
         <nav>
-          <button onClick={() => setPage('home')}>Overview</button>
-          <button onClick={() => setPage('install')}>Install / Repair</button>
-          <button onClick={() => setPage('logs')}>Logs</button>
-          <button onClick={() => setPage('settings')}>Settings</button>
+          <button onClick={() => handleNavigate('home')}>Overview</button>
+          <button onClick={() => handleNavigate('install')}>Install / Repair</button>
+          <button onClick={() => handleNavigate('logs')}>Logs</button>
+          <button onClick={() => handleNavigate('settings')}>Settings</button>
         </nav>
       </aside>
 
@@ -24,7 +43,9 @@ function App() {
         {page === 'home' && <HomePage />}
         {page === 'install' && <InstallPage />}
         {page === 'logs' && <LogsPage />}
-        {page === 'settings' && <SettingsPage />}
+        {page === 'settings' && (
+          <SettingsPage onPendingChange={(pending) => updateSettingsPending(pending)} />
+        )}
       </main>
     </div>
   );
@@ -138,13 +159,18 @@ function LogsPage() {
   );
 }
 
-function SettingsPage() {
+function SettingsPage({
+  onPendingChange,
+}: {
+  onPendingChange?: (hasPending: boolean) => void;
+}) {
   const [options, setOptions] = useState<UserOptions | null>(null);
   const [userReposText, setUserReposText] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [dirtyFields, setDirtyFields] = useState({ repoUrl: false, userRepos: false });
 
   useEffect(() => {
     getUserOptions()
@@ -156,10 +182,20 @@ function SettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const hasPending = saving || dirtyFields.repoUrl || dirtyFields.userRepos;
+
+  useEffect(() => {
+    onPendingChange?.(hasPending);
+  }, [hasPending, onPendingChange]);
+
+  useEffect(() => () => {
+    onPendingChange?.(false);
+  }, [onPendingChange]);
+
   const saveOptions = async (
     nextOptions: UserOptions,
     { syncUserReposText }: { syncUserReposText: boolean },
-  ) => {
+  ): Promise<boolean> => {
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -175,28 +211,45 @@ function SettingsPage() {
       }
 
       setMessage('Options saved');
+      return true;
     } catch (err) {
       setError(String(err));
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const onSave = async () => {
-    if (!options) return;
-
-    const repoList = userReposText
+  const parseUserReposText = () => 
+    userReposText
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
+
+  const onRepoUrlBlur = async () => {
+    if (!options || saving || !dirtyFields.repoUrl) return;
+
+    const saved = await saveOptions(options, { syncUserReposText: false });
+    if (saved) {
+      setDirtyFields((prev) => ({ ...prev, repoUrl: false }));
+    }
+  };
+
+  const onUserReposBlur = async () => {
+    if (!options || saving || !dirtyFields.userRepos) return;
+
+    const repoList = parseUserReposText();
 
     const nextOptions = {
       ...options,
       userRepositories: repoList,
     };
 
-    await saveOptions(nextOptions , { syncUserReposText: true });
-  }
+    const saved = await saveOptions(nextOptions , { syncUserReposText: true });
+    if (saved) {
+      setDirtyFields((prev) => ({ ...prev, userRepos: false }));
+    }
+  };
 
   const onToggleProvidedRepo = async (id: string) => {
     if (!options || saving) return;
@@ -227,7 +280,12 @@ function SettingsPage() {
                 id='vencord-repo'
                 className='text-input'
                 value={options.vencordRepoUrl}
-                onChange={(e) => setOptions({ ...options, vencordRepoUrl: e.target.value })}
+                onChange={(e) => {
+                  setOptions({ ...options, vencordRepoUrl: e.target.value });
+                  setDirtyFields((prev) => ({ ...prev, repoUrl: true }));
+                  setMessage(null);
+                }}
+                onBlur={onRepoUrlBlur}
               />
               <small>Used when cloning the Vencord source during install/update</small>
             </div>
@@ -265,16 +323,15 @@ function SettingsPage() {
                 className='text-area'
                 rows={5}
                 value={userReposText}
-                onChange={(e) => setUserReposText(e.target.value)}
+                onChange={(e) => {
+                  setUserReposText(e.target.value);
+                  setDirtyFields((prev) => ({ ...prev, userRepos: true }));
+                  setMessage(null);
+                }}
+                onBlur={onUserReposBlur}
                 placeholder='One repository per line'
               />
               <small>Each entry will be stored in the user options file for installer use</small>
-            </div>
-
-            <div className='actions'>
-              <button onClick={onSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save options'}
-              </button>
             </div>
 
             {message && <p className='status-text'>{message}</p>}
