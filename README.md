@@ -25,12 +25,12 @@ A cross-platform GUI for installing and managing Vencord. It detects Discord ins
 
 ## :sparkles: Features ##
 
-:heavy_check_mark: Detect Discord Stable, PTB, and Canary;
-:heavy_check_mark: Install or update Vencord;
-:heavy_check_mark: Optional backup of existing Vencord installs;
-:heavy_check_mark: Separate flows for install, uninstall, backup, and repo sync;
-:heavy_check_mark: Support for custom vencord user plugins;
-:heavy_check_mark: Cross-platform via Tauri.
+:heavy_check_mark: Detect Discord Stable, PTB, and Canary\
+:heavy_check_mark: Install or update Vencord\
+:heavy_check_mark: Optional backup of existing Vencord installs\
+:heavy_check_mark: Separate flows for install, uninstall, backup, and repo sync\
+:heavy_check_mark: Support for custom vencord user plugins\
+:heavy_check_mark: Cross-platform via Tauri
 
 ## :rocket: Technologies ##
 
