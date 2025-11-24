@@ -3,21 +3,23 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::PathBuf};
 
+use crate::config::app_config_dir;
+
 const DEFAULT_VENCORD_REPO_URL: &str = "https://github.com/Vendicated/Vencord.git";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ProvidedRepository {
-    id: String,
-    name: String,
-    url: String,
-    description: String,
-    default_enabled: bool,
+  id: String,
+  name: String,
+  url: String,
+  description: String,
+  default_enabled: bool,
 }
 
 static PROVIDED_REPOSITORIES: Lazy<Vec<ProvidedRepository>> = Lazy::new(|| {
   serde_json::from_str(include_str!("provided_repositories.json"))
-      .expect("Failed to parse provided_repositories.json")
+    .expect("Failed to parse provided_repositories.json")
 });
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -64,22 +66,19 @@ impl Default for UserOptions {
       vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
       user_repositories: Vec::new(),
       provided_repositories: PROVIDED_REPOSITORIES
-          .iter()
-          .map(|repo| ProvidedRepositoryState {
-            id: repo.id.clone(),
-            enabled: repo.default_enabled,
-          })
-          .collect(),
+        .iter()
+        .map(|repo| ProvidedRepositoryState {
+          id: repo.id.clone(),
+          enabled: repo.default_enabled,
+        })
+        .collect(),
     }
   }
 }
 
 fn options_path() -> Result<PathBuf, String> {
-  let base_dir = dirs::config_dir()
-      .or_else(dirs::home_dir)
-      .ok_or_else(|| "Could not determine configuration directory".to_string())?;
-  let dir = base_dir.join("vencord-installer-gui");
-  fs::create_dir_all(&dir).map_err(|err| format!("Failed to create options directory: {err}"))?;
+  let dir = 
+      app_config_dir().map_err(|err| format!("Failed to create options directory: {err}"))?;
 
   Ok(dir.join("user-options.json"))
 }
@@ -87,7 +86,7 @@ fn options_path() -> Result<PathBuf, String> {
 fn save_options(options: &UserOptions) -> Result<(), String> {
   let path = options_path()?;
   let json = serde_json::to_string_pretty(options)
-      .map_err(|err| format!("Failed to serialize options: {err}"))?;
+    .map_err(|err| format!("Failed to serialize options: {err}"))?;
 
   fs::write(path, json).map_err(|err| format!("Failed to write options file: {err}"))
 }
@@ -160,23 +159,23 @@ fn merge_provided_repositories(saved: &[ProvidedRepositoryState]) -> Vec<Provide
     .collect();
 
   PROVIDED_REPOSITORIES
-      .iter()
-      .map(|repo| {
-        let enabled = saved_map
-            .get(&repo.id)
-            .copied()
-            .unwrap_or(repo.default_enabled);
-        
-        ProvidedRepositoryView {
-          id: repo.id.clone(),
-          name: repo.name.clone(),
-          url: repo.url.clone(),
-          description: repo.description.clone(),
-          default_enabled: repo.default_enabled,
-          enabled,
-        }
-      })
-      .collect()
+    .iter()
+    .map(|repo| {
+      let enabled = saved_map
+        .get(&repo.id)
+        .copied()
+        .unwrap_or(repo.default_enabled);
+
+      ProvidedRepositoryView {
+        id: repo.id.clone(),
+        name: repo.name.clone(),
+        url: repo.url.clone(),
+        description: repo.description.clone(),
+        default_enabled: repo.default_enabled,
+        enabled,
+      }
+    })
+    .collect()
 }
 
 fn to_response(options: UserOptions) -> OptionsResponse {
@@ -189,19 +188,19 @@ fn to_response(options: UserOptions) -> OptionsResponse {
 
 fn to_storage(options: OptionsResponse) -> UserOptions {
   let valid_ids: HashMap<_, _> = PROVIDED_REPOSITORIES
-      .iter()
-      .map(|repo| (repo.id.clone(), repo.default_enabled))
-      .collect();
+    .iter()
+    .map(|repo| (repo.id.clone(), repo.default_enabled))
+    .collect();
 
   let provided_repositories = options
-      .provided_repositories
-      .into_iter()
-      .filter(|repo| valid_ids.contains_key(&repo.id))
-      .map(|repo| ProvidedRepositoryState {
-        id: repo.id,
-        enabled: repo.enabled,
-      })
-      .collect();
+    .provided_repositories
+    .into_iter()
+    .filter(|repo| valid_ids.contains_key(&repo.id))
+    .map(|repo| ProvidedRepositoryState {
+      id: repo.id,
+      enabled: repo.enabled,
+    })
+    .collect();
 
   UserOptions {
     vencord_repo_url: options.vencord_repo_url,

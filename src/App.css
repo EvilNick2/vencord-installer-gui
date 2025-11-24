@@ -130,6 +130,137 @@ h2 {
   color: var(--text);
 }
 
+.logs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logs-header p {
+  margin: 4px 0 0 0;
+  color: var(--muted);
+}
+
+.logs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.log-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.log-card__description {
+  margin: 4px 0 0 0;
+  color: var(--muted);
+}
+
+.log-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--secondary-furface);
+}
+
+.log-card__next,
+.log-card__count {
+  font-weight: 600;
+}
+
+.log-scroll {
+  height: 220px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--secondary-furface);
+}
+
+.status-pending {
+  color: #c2410c;
+  background: rgba(194, 65, 12, 0.08);
+  border-color: rgba(194, 65, 12, 0.18);
+}
+
+.status-ready {
+  color: #15803d;
+  background: rgba(21, 128, 61, 0.1);
+  border-color: rgba(21, 128, 61, 0.18);
+}
+
+.status-info {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 64px 70px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.log-entry--muted {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.log-time {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.log-label {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.log-message {
+  line-height: 1.4;
+}
+
 .install-list {
   list-style: none;
   padding-left: 0;
