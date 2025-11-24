@@ -5,6 +5,10 @@ use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::config::app_config_dir;
 
+fn default_true() -> bool {
+  true
+}
+
 const DEFAULT_VENCORD_REPO_URL: &str = "https://github.com/Vendicated/Vencord.git";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -47,6 +51,8 @@ pub struct OptionsResponse {
   pub user_repositories: Vec<String>,
   #[serde(default)]
   pub provided_repositories: Vec<ProvidedRepositoryView>,
+  #[serde(default = "default_true")]
+  pub close_discord_on_backup: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -57,6 +63,8 @@ pub struct UserOptions {
   pub user_repositories: Vec<String>,
   #[serde(default)]
   pub provided_repositories: Vec<ProvidedRepositoryState>,
+  #[serde(default = "default_true")]
+  pub close_discord_on_backup: bool,
 }
 
 impl Default for UserOptions {
@@ -72,6 +80,7 @@ impl Default for UserOptions {
           enabled: repo.default_enabled,
         })
         .collect(),
+      close_discord_on_backup: default_true(),
     }
   }
 }
@@ -183,6 +192,7 @@ fn to_response(options: UserOptions) -> OptionsResponse {
     vencord_repo_url: options.vencord_repo_url,
     user_repositories: options.user_repositories,
     provided_repositories: merge_provided_repositories(&options.provided_repositories),
+    close_discord_on_backup: options.close_discord_on_backup,
   }
 }
 
@@ -207,12 +217,13 @@ fn to_storage(options: OptionsResponse) -> UserOptions {
     vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
     user_repositories: options.user_repositories,
     provided_repositories,
+    close_discord_on_backup: options.close_discord_on_backup,
   }
 }
 
 #[tauri::command]
 pub fn get_user_options() -> Result<OptionsResponse, String> {
-  let options = load_options()?;
+  let options = read_user_options()?;
   Ok(to_response(options))
 }
 
@@ -223,4 +234,8 @@ pub fn update_user_options(options: OptionsResponse) -> Result<OptionsResponse, 
 
   let refreshed = load_options()?;
   Ok(to_response(refreshed))
+}
+
+pub fn read_user_options() -> Result<UserOptions, String> {
+  load_options()
 }

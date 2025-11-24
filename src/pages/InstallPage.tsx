@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import { getDiscordInstalls } from "../api";
-import type { DiscordInstall } from "../api";
+import { getDiscordInstalls, listDiscordProcesses } from "../api";
+import type { DiscordInstall, DiscordProcess } from "../api";
+
+const DISCORD_PROCESS_ORDER = ["discord", "discordptb", "discordcanary"] as const;
+
+const normalizeProcessName = (name: string) => name.toLowerCase().replace(/\.exe$/, "");
 
 export default function InstallPage() {
   const [installs, setInstalls] = useState<DiscordInstall[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [openClients, setOpenClients] = useState<DiscordProcess[]>([]);
+  const [processError, setProcessError] = useState<string | null>(null);
+  const [processLoading, setProcessLoading] = useState(true);
 
   useEffect(() => {
     getDiscordInstalls()
@@ -24,6 +31,45 @@ export default function InstallPage() {
         setError(String(err));
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  const refreshOpenClients = () => {
+    setProcessError(null);
+    setProcessLoading(true);
+
+    listDiscordProcesses()
+      .then((clients) => {
+        const uniqueByType = new Map<string, DiscordProcess>();
+
+        for (const client of clients) {
+          const normalized = normalizeProcessName(client.name);
+
+          if (!uniqueByType.has(normalized)) {
+            uniqueByType.set(normalized, client);
+          }
+        }
+
+        const ordered = Array.from(uniqueByType.values()).sort((a, b) => {
+          const aName = normalizeProcessName(a.name);
+          const bName = normalizeProcessName(b.name);
+
+          const aIndex = DISCORD_PROCESS_ORDER.indexOf(aName as (typeof DISCORD_PROCESS_ORDER)[number])
+          const bIndex = DISCORD_PROCESS_ORDER.indexOf(bName as (typeof DISCORD_PROCESS_ORDER)[number])
+
+          const normalizedAIndex = aIndex === -1 ? DISCORD_PROCESS_ORDER.length : aIndex;
+          const normalizedBIndex = bIndex === -1 ? DISCORD_PROCESS_ORDER.length : bIndex;
+
+          return normalizedAIndex - normalizedBIndex;
+        });
+
+        setOpenClients(ordered);
+      })
+      .catch((err) => setProcessError(String(err)))
+      .finally(() => setProcessLoading(false));
+  };
+
+  useEffect(() => {
+    refreshOpenClients();
   }, []);
 
   const toggle = (id: string) => {
@@ -57,6 +103,32 @@ export default function InstallPage() {
                 <span className='install-name'>{inst.name}</span>
                 <span className='install-path'>{inst.path}</span>
               </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h3>Currently running Discord</h3>
+          <button onClick={refreshOpenClients} disabled={processLoading}>
+            {processLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+
+        {processLoading && <p>Scanning for running clients...</p>}
+        {!processLoading && processError && (
+          <p className="error">Error: {processError}</p>
+        )}
+        {!processLoading && openClients.length === 0 && !processError && (
+          <p>No Discord processes are currently running</p>
+        )}
+
+        <ul className="install-list">
+          {openClients.map((proc) => (
+            <li key={normalizeProcessName(proc.name)}>
+              <div className="install-name">{proc.name}</div>
+              {proc.exe && <div className="install-path">{proc.exe}</div>}
             </li>
           ))}
         </ul>

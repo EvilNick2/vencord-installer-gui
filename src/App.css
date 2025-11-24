@@ -115,6 +115,32 @@ h2 {
   margin-top: 0;
 }
 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-header button {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--button-bg);
+  color: var(--button-text);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.card-header button:hover {
+  background: var(--button-hover);
+}
+
+.card-header button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -277,6 +303,10 @@ h2 {
   margin-right: 8px;
 }
 
+.muted {
+  color: var(--muted);
+}
+
 .install-path {
   font-family: monospace;
   font-size: 12px;
@@ -352,4 +382,23 @@ small,
 .repo-url {
   font-family: monospace;
   font-size: 12px;
+}
+
+.checkbox-field {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.checkbox-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.checkbox-row input {
+  margin-top: 3px;
+}
+
+.checkbox-title {
+  font-weight: 600;
 }

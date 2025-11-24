@@ -94,6 +94,17 @@ export default function SettingsPage({
     }
   };
 
+  const onToggleCloseDiscord = async () => {
+    if (!options || saving) return;
+
+    const nextOptions: UserOptions = {
+      ...options,
+      closeDiscordOnBackup: !options.closeDiscordOnBackup,
+    };
+
+    await saveOptions(nextOptions, { syncUserReposText: false });
+  };
+
   const onToggleProvidedRepo = async (id: string) => {
     if (!options || saving) return;
 
@@ -175,6 +186,24 @@ export default function SettingsPage({
                 placeholder='One repository per line'
               />
               <small>Each entry will be stored in the user options file for installer use</small>
+            </div>
+
+            <div className="form-field checkbox-field">
+              <label className="checkbox_row" htmlFor="close-discord">
+                <input
+                  id="close-discord"
+                  type="checkbox"
+                  checked={options.closeDiscordOnBackup}
+                  disabled={saving}
+                  onChange={onToggleCloseDiscord}
+                />
+                <div>
+                  <div className="checkbox-title">Close Discord clients before backup</div>
+                  <small>
+                    When enabled, the installer will temporarily close Discord instance before moving Vencord files and then reopen them afterward
+                  </small>
+                </div>
+              </label>
             </div>
 
             {message && <p className='status-text'>{message}</p>}

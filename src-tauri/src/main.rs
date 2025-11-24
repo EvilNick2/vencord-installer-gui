@@ -3,6 +3,7 @@
 
 mod config;
 mod discord;
+mod flows;
 mod logging;
 mod options;
 
@@ -17,6 +18,9 @@ fn main() {
           Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+          flows::backup::backup_vencord_install,
+          flows::discord_clients::list_discord_processes,
+          flows::pipeline::run_patch_flow,
           discord::get_discord_installs,
           options::get_user_options,
           options::update_user_options,
