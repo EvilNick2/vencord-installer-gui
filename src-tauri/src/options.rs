@@ -1,12 +1,33 @@
 use log::warn;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, env, fs, path::PathBuf};
 
 use crate::config::app_config_dir;
 
 fn default_true() -> bool {
   true
+}
+
+fn default_repo_base_dir() -> String {
+  let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+  let home_dir = env::var(home_var).unwrap_or_else(|_| ".".to_string());
+
+  PathBuf::from(home_dir)
+    .join("Documents")
+    .join("Vencord")
+    .to_string_lossy()
+    .into_owned()
+}
+
+fn legacy_repo_base_dir() -> String {
+  let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+  let home_dir = env::var(home_var).unwrap_or_else(|_| ".".to_string());
+
+  PathBuf::from(home_dir)
+    .join("Documents")
+    .to_string_lossy()
+    .into_owned()
 }
 
 const DEFAULT_VENCORD_REPO_URL: &str = "https://github.com/Vendicated/Vencord.git";
@@ -48,6 +69,8 @@ pub struct ProvidedRepositoryView {
 #[serde(rename_all = "camelCase")]
 pub struct OptionsResponse {
   pub vencord_repo_url: String,
+  #[serde(default = "default_repo_base_dir")]
+  pub vencord_repo_dir: String,
   pub user_repositories: Vec<String>,
   #[serde(default)]
   pub provided_repositories: Vec<ProvidedRepositoryView>,
@@ -59,6 +82,8 @@ pub struct OptionsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct UserOptions {
   pub vencord_repo_url: String,
+  #[serde(default = "default_repo_base_dir")]
+  pub vencord_repo_dir: String,
   pub vencord_repo_url_default: Option<String>,
   pub user_repositories: Vec<String>,
   #[serde(default)]
@@ -72,6 +97,7 @@ impl Default for UserOptions {
     Self {
       vencord_repo_url: DEFAULT_VENCORD_REPO_URL.to_string(),
       vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
+      vencord_repo_dir: default_repo_base_dir(),
       user_repositories: Vec::new(),
       provided_repositories: PROVIDED_REPOSITORIES
         .iter()
@@ -86,8 +112,7 @@ impl Default for UserOptions {
 }
 
 fn options_path() -> Result<PathBuf, String> {
-  let dir = 
-      app_config_dir().map_err(|err| format!("Failed to create options directory: {err}"))?;
+  let dir = app_config_dir().map_err(|err| format!("Failed to create options directory: {err}"))?;
 
   Ok(dir.join("user-options.json"))
 }
@@ -115,6 +140,14 @@ fn reconcile_options(mut options: UserOptions) -> Result<UserOptions, String> {
     }
 
     options.vencord_repo_url_default = Some(current_default_url.clone());
+    updated = true;
+  }
+
+  let current_default_dir = default_repo_base_dir();
+  let legacy_default_dir = legacy_repo_base_dir();
+
+  if options.vencord_repo_dir == legacy_default_dir {
+    options.vencord_repo_dir = current_default_dir;
     updated = true;
   }
 
@@ -190,6 +223,7 @@ fn merge_provided_repositories(saved: &[ProvidedRepositoryState]) -> Vec<Provide
 fn to_response(options: UserOptions) -> OptionsResponse {
   OptionsResponse {
     vencord_repo_url: options.vencord_repo_url,
+    vencord_repo_dir: options.vencord_repo_dir,
     user_repositories: options.user_repositories,
     provided_repositories: merge_provided_repositories(&options.provided_repositories),
     close_discord_on_backup: options.close_discord_on_backup,
@@ -215,6 +249,7 @@ fn to_storage(options: OptionsResponse) -> UserOptions {
   UserOptions {
     vencord_repo_url: options.vencord_repo_url,
     vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
+    vencord_repo_dir: options.vencord_repo_dir,
     user_repositories: options.user_repositories,
     provided_repositories,
     close_discord_on_backup: options.close_discord_on_backup,

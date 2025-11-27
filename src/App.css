@@ -340,7 +340,7 @@ h2 {
 }
 
 small,
-.repo-description {
+.settings-list-description {
   color: var(--muted);
 }
 
@@ -348,7 +348,7 @@ small,
   margin-top: 8px;
 }
 
-.repo-list {
+.settings-list {
   list-style: none;
   padding-left: 0;
   margin: 0;
@@ -357,29 +357,29 @@ small,
   gap: 8px;
 }
 
-.repo-list-item {
+.settings-list-item {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
 }
 
-.repo-row {
+.settings-row {
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
 
-.repo-meta {
+.settings-meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.repo-title {
+.settings-title {
   font-weight: 600;
 }
 
-.repo-url {
+.settings-url {
   font-family: monospace;
   font-size: 12px;
 }

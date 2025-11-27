@@ -13,7 +13,11 @@ export default function SettingsPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [dirtyFields, setDirtyFields] = useState({ repoUrl: false, userRepos: false });
+  const [dirtyFields, setDirtyFields] = useState({ 
+    repoUrl: false,
+    repoDir: false,
+    userRepos: false,
+  });
 
   useEffect(() => {
     getUserOptions()
@@ -25,7 +29,7 @@ export default function SettingsPage({
       .finally(() => setLoading(false));
   }, []);
 
-  const hasPending = saving || dirtyFields.repoUrl || dirtyFields.userRepos;
+  const hasPending = saving || dirtyFields.repoUrl || dirtyFields.repoDir || dirtyFields.userRepos;
 
   useEffect(() => {
     onPendingChange?.(hasPending);
@@ -121,13 +125,13 @@ export default function SettingsPage({
   return (
     <section>
       <h2>Settings</h2>
-      <div className='card'>
-        <h3>User options file</h3>
-        {loading && <p>Loading current options...</p>}
-        {error && <p className='error'>Error: {error}</p>}
+      {loading && <p>Loading current options...</p>}
+      {error && <p className='error'>Error: {error}</p>}
 
-        {!loading && options && (
-          <>
+      {!loading && options && (
+        <>
+          <div className="card">
+            <h3>Vencord repository</h3>
             <div className='form-field'>
               <label htmlFor='vencord-repo'>Vencord Git clone URL</label>
               <input
@@ -144,22 +148,52 @@ export default function SettingsPage({
               <small>Used when cloning the Vencord source during install/update</small>
             </div>
 
+            <div className="form-field">
+              <label htmlFor="vencord-repo-dir">Clone destination</label>
+              <input
+                id="vencord-repo-dir"
+                className="text-input"
+                value={options.vencordRepoDir}
+                onChange={(e) => {
+                  setOptions({ ...options, vencordRepoDir: e.target.value });
+                  setDirtyFields((prev) => ({ ...prev, repoDir: true }));
+                  setMessage(null);
+                }}
+                onBlur={async () => {
+                  if (!options || saving || !dirtyFields.repoDir) return;
+
+                  const saved = await saveOptions(options, { syncUserReposText: false });
+                  if (saved) {
+                    setDirtyFields((prev) => ({ ...prev, repoDir: false }));
+                  }
+                }}
+                placeholder="e.g., C:/Users/user/Documents/Vencord"
+              />
+              <small>
+                The installer will clone or update the Vencord source directly at this path, using the folder name you provide
+                Defaults to your Documents/Vencord folder
+              </small>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3>Provided repositories</h3>
             <div className='form-field'>
-              <label>Provided repositories</label>
-              <ul className='repo-list'>
+              <label>Included plguin sources</label>
+              <ul className='settings-list'>
                 {options.providedRepositories.map((repo) => (
-                  <li key={repo.id} className='repo-list-item'>
-                    <label className='repo-row'>
+                  <li key={repo.id} className='settings-list-item'>
+                    <label className='settings-row'>
                       <input
                         type='checkbox'
                         checked={repo.enabled}
                         disabled={saving}
                         onChange={() => onToggleProvidedRepo(repo.id)}
                       />
-                      <div className='repo-meta'>
-                        <div className='repo-title'>{repo.name}</div>
-                        <div className='repo-url'>{repo.url}</div>
-                        <p className='repo-description'>{repo.description}</p>
+                      <div className='settings-meta'>
+                        <div className='settings-title'>{repo.name}</div>
+                        <div className='settings-url'>{repo.url}</div>
+                        <p className='settings-description'>{repo.description}</p>
                       </div>
                     </label>
                   </li>
@@ -169,7 +203,10 @@ export default function SettingsPage({
                 Toggle which bundled repositories should be used. This list may change with app updates if a repositories is added, removed, or marked unstable
               </small>
             </div>
-
+          </div>
+          
+          <div className="card">
+            <h3>Custom repositories</h3>
             <div className='form-field'>
               <label htmlFor='user-repos'>Custom user plugin repositories</label>
               <textarea
@@ -187,29 +224,36 @@ export default function SettingsPage({
               />
               <small>Each entry will be stored in the user options file for installer use</small>
             </div>
+          </div>
 
-            <div className="form-field checkbox-field">
-              <label className="checkbox_row" htmlFor="close-discord">
-                <input
-                  id="close-discord"
-                  type="checkbox"
-                  checked={options.closeDiscordOnBackup}
-                  disabled={saving}
-                  onChange={onToggleCloseDiscord}
-                />
-                <div>
-                  <div className="checkbox-title">Close Discord clients before backup</div>
-                  <small>
-                    When enabled, the installer will temporarily close Discord instance before moving Vencord files and then reopen them afterward
-                  </small>
-                </div>
-              </label>
+          <div className="card">
+            <h3>Discord handling</h3>
+            <div className="form-field">
+              <ul className="settings-list">
+                <li className="settings-list-item">
+                  <label className="settings-list-row checkbox-row" htmlFor="close-discord">
+                    <input
+                      id="close-discord"
+                      type="checkbox"
+                      checked={options.closeDiscordOnBackup}
+                      disabled={saving}
+                      onChange={onToggleCloseDiscord}
+                    />
+                    <div>
+                      <div className="checkbox-title">Close Discord clients before backup</div>
+                      <small>
+                        When enabled, the installer will temporarily close Discord instance before moving Vencord files and then reopen them afterward
+                      </small>
+                    </div>
+                  </label>
+                </li>
+              </ul>
             </div>
+          </div>
 
-            {message && <p className='status-text'>{message}</p>}
-          </>
-        )}
-      </div>
+          {message && <p className='status-text'>{message}</p>}
+        </>
+      )}
     </section>
   );
 }

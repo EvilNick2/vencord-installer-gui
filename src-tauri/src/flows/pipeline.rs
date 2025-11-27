@@ -1,9 +1,9 @@
-use serde::Serialize;
+use serde::{Serialize};
 use std::path::Path;
 
 use crate::options;
 
-use super::{backup, discord_clients};
+use super::{backup, discord_clients, repo};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,8 +82,19 @@ pub fn run_patch_flow(source_path: String) -> Result<PatchFlowResult, String> {
 
   let backup_step = StepResult::completed(backup_result);
 
-  let clone_step =
-    StepResult::pending("Repository clone step placeholder; implement Vencord sync next");
+  let clone_path =
+    match repo::sync_vencord_repo(&options.vencord_repo_url, &options.vencord_repo_dir) {
+      Ok(path) => path,
+      Err(err) => {
+        if !discord_state.closing_skipped {
+          let _ = discord_clients::restart_processes(&discord_state.processes);
+        }
+
+        return Err(err);
+      }
+    };
+
+  let clone_step = StepResult::completed(clone_path);
   let build_step = StepResult::pending("Build step placeholder; wire to installer build command");
   let inject_step = StepResult::pending("Inject step placeholder; add patching logic after build");
 

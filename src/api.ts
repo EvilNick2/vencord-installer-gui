@@ -17,6 +17,7 @@ export type ProvidedRepository = {
 
 export type UserOptions = {
   vencordRepoUrl: string;
+  vencordRepoDir: string;
   userRepositories: string[];
   providedRepositories: ProvidedRepository[];
   closeDiscordOnBackup: boolean;
