@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::{
-  fs,
+  fs, io,
   path::Path,
   path::PathBuf,
   time::{SystemTime, UNIX_EPOCH},
@@ -38,6 +38,61 @@ fn backup_destination() -> Result<PathBuf, String> {
   Ok(backups.join(format!("vencord-{timestamp}")))
 }
 
+fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<(), String> {
+  fs::create_dir(destination).map_err(|err| {
+    format!(
+      "Failed to create backup directory {}: {err}",
+      destination.display()
+    )
+  })?;
+
+  for entry in fs::read_dir(source)
+    .map_err(|err| format!("failed to read directory {}: {err}", source.display()))?
+  {
+    let entry = entry.map_err(|err| {
+      format!(
+        "Failed to read directory entry in {}: {err}",
+        source.display()
+      )
+    })?;
+    let path = entry.path();
+    let dest_path = destination.join(entry.file_name());
+
+    if path.is_dir() {
+      copy_dir_recursive(&path, &dest_path)?;
+    } else {
+      fs::copy(&path, &dest_path).map_err(|err| {
+        format!(
+          "Failed to copy {} to {}: {err}",
+          path.display(),
+          dest_path.display()
+        )
+      })?;
+    }
+  }
+
+  Ok(())
+}
+
+
+fn is_cross_device_link(err: &io::Error) -> bool {
+  match err.raw_os_error() {
+    Some(18) => true,
+    Some(17) => true,
+    _ => {
+      #[cfg(not(target_os = "windows"))]
+      {
+        return err.kind() == io::ErrorKind::CrossDeviceLink;
+      }
+
+      #[cfg(target_os = "windows")]
+      {
+        return false;
+      }
+    }
+  }
+}
+
 pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
   if !source.exists() {
     return Err(format!("Vencord install not found at {}", source.display()));
@@ -45,13 +100,35 @@ pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
 
   let destination = backup_destination()?;
 
-  fs::rename(source, &destination).map_err(|err| {
-    format!(
-      "Failed to move Vencord install from {} to {}: {err}",
-      source.display(),
-      destination.display()
-    )
-  })?;
+  if let Err(err) = fs::rename(source, &destination) {
+    if !is_cross_device_link(&err) {
+      return Err(format!(
+        "Failed to move Vencord install from {} to {}: {err}",
+        source.display(),
+        destination.display()
+      ));
+    }
+
+    if source.is_dir() {
+      copy_dir_recursive(source, &destination)?;
+      fs::remove_dir_all(source).map_err(|err| {
+        format!(
+          "Failed to remove original directory {}: {err}",
+          source.display()
+        )
+      })?;
+    } else {
+      fs::copy(source, &destination).map_err(|err| {
+        format!(
+          "Failed to copy {} to {}: {err}",
+          source.display(),
+          destination.display()
+        )
+      })?;
+      fs::remove_file(source)
+        .map_err(|err| format!("Failed to remove original file {}: {err}", source.display()))?;
+    }
+  }
 
   Ok(destination)
 }
