@@ -1,10 +1,6 @@
+use chrono::Local;
 use serde::Serialize;
-use std::{
-  fs, io,
-  path::Path,
-  path::PathBuf,
-  time::{SystemTime, UNIX_EPOCH},
-};
+use std::{fs, io, path::Path, path::PathBuf};
 
 use crate::{config::app_config_dir, options};
 
@@ -30,10 +26,7 @@ fn backup_destination() -> Result<PathBuf, String> {
     )
   })?;
 
-  let timestamp = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .map_err(|err| format!("System time error: {err}"))?
-    .as_secs();
+  let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
 
   Ok(backups.join(format!("vencord-{timestamp}")))
 }
@@ -98,6 +91,10 @@ pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
     return Err(format!("Vencord install not found at {}", source.display()));
   }
 
+  if let Err(err) = remove_node_modules(source) {
+    return Err(err);
+  }
+
   let destination = backup_destination()?;
 
   if let Err(err) = fs::rename(source, &destination) {
@@ -131,6 +128,53 @@ pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
   }
 
   Ok(destination)
+}
+
+fn remove_node_modules(source: &Path) -> Result<(), String> {
+  if !source.exists() {
+    return Ok(());
+  }
+
+  let mut stack = vec![source.to_path_buf()];
+
+  while let Some(dir) = stack.pop() {
+    let entries = fs::read_dir(&dir)
+      .map_err(|err| format!("Failed to read directory {}: {err}", dir.display()))?;
+
+    for entry in entries {
+      let entry =
+        entry.map_err(|err| format!("Failed to read entry in {}: {err}", dir.display()))?;
+      let path = entry.path();
+
+      if let Some(name) = path.file_name().and_then(|name| name.to_str()) {
+        if name == "node_modules" {
+          if path.is_dir() {
+            fs::remove_dir_all(&path).map_err(|err| {
+              format!(
+                "Failed to remove node_modules directory {}: {err}",
+                path.display()
+              )
+            })?;
+          } else {
+            fs::remove_file(&path).map_err(|err| {
+              format!(
+                "Failed to remove node_modules entry {}: {err}",
+                path.display()
+              )
+            })?;
+          }
+
+          continue;
+        }
+      }
+
+      if path.is_dir() {
+        stack.push(path);
+      }
+    }
+  }
+
+  Ok(())
 }
 
 #[tauri::command]
