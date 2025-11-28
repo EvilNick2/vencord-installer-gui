@@ -84,6 +84,7 @@ pub enum DevTestResult {
   },
   Build {
     message: String,
+    path: Option<String>,
   },
   Inject {
     message: String,
@@ -98,9 +99,9 @@ pub enum DevTestResult {
 #[tauri::command]
 pub fn run_patch_flow(source_path: String) -> Result<PatchFlowResult, String> {
   let options = options::read_user_options()?;
+  let plugin_urls = options::resolve_plugin_repositories(&options);
 
   let discord_state = discord_clients::close_discord_clients(options.close_discord_on_backup);
-
 
   let close_step = if discord_state.closing_skipped {
     StepResult::skipped("Closing Discord is disabled in settings")
@@ -120,20 +121,32 @@ pub fn run_patch_flow(source_path: String) -> Result<PatchFlowResult, String> {
 
   let backup_step = StepResult::completed(backup_result);
 
-  let sync_path =
-    match repo::sync_vencord_repo(&options.vencord_repo_url, &options.vencord_repo_dir) {
-      Ok(path) => path,
-      Err(err) => {
-        if !discord_state.closing_skipped {
-          let _ = discord_clients::restart_processes(&discord_state.processes);
-        }
-
-        return Err(err);
+  let sync_path = match repo::sync_vencord_repo(
+    &options.vencord_repo_url,
+    &options.vencord_repo_dir,
+    &plugin_urls,
+  ) {
+    Ok(path) => path,
+    Err(err) => {
+      if !discord_state.closing_skipped {
+        let _ = discord_clients::restart_processes(&discord_state.processes);
       }
-    };
 
-  let sync_step = StepResult::completed(sync_path);
-  let build_step = StepResult::pending("Build step placeholder; wire to installer build command");
+      return Err(err);
+    }
+  };
+
+  let sync_step = StepResult::completed(sync_path.clone());
+  let build_step = match repo::build_vencord_repo(&sync_path) {
+    Ok(message) => StepResult::completed(message),
+    Err(err) => {
+      if !discord_state.closing_skipped {
+        let _ = discord_clients::restart_processes(&discord_state.processes);
+      }
+
+      return Err(err);
+    }
+  };
   let inject_step = StepResult::pending("Inject step placeholder; add patching logic after build");
 
   let reopen_step = if discord_state.closing_skipped {
@@ -189,13 +202,24 @@ pub fn run_dev_test(
     }
     DevTestStep::SyncRepo => {
       let options = options::read_user_options()?;
-      let path = repo::sync_vencord_repo(&options.vencord_repo_url, &options.vencord_repo_dir)?;
+      let plugins = options::resolve_plugin_repositories(&options);
+      let path = repo::sync_vencord_repo(
+        &options.vencord_repo_url,
+        &options.vencord_repo_dir,
+        &plugins,
+      )?;
 
       Ok(DevTestResult::SyncRepo { path })
     }
-    DevTestStep::Build => Ok(DevTestResult::Build {
-      message: "Build step placeholder; add to installer build command".to_string(),
-    }),
+    DevTestStep::Build => {
+      let options = options::read_user_options()?;
+      let message = repo::build_vencord_repo(&options.vencord_repo_dir)?;
+
+      Ok(DevTestResult::Build {
+        message,
+        path: Some(options.vencord_repo_dir),
+      })
+    }
     DevTestStep::Inject => Ok(DevTestResult::Inject {
       message: "Inject step placeholder; add patching logic after build".to_string(),
     }),

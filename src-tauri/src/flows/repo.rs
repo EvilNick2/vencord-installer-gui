@@ -1,7 +1,118 @@
-use std::{fs, path::PathBuf, process::Command};
+use std::{env, fs, path::{Path, PathBuf}, process::Command};
+
+#[cfg(windows)]
+fn command_candidates(command: &str) -> [String; 3] {
+  [
+    format!("{command}.cmd"),
+    format!("{command}.exe"),
+    command.to_string(),
+  ]
+}
+
+#[cfg(not(windows))]
+fn command_candidates(command: &str) -> [String; 1] {
+  [command.to_string()]
+}
+
+fn run_command(
+  command: &str,
+  args: &[&str],
+  working_dir: Option<&str>,
+  error_prefix: &str,
+) -> Result<(), String> {
+  let mut last_error: Option<String> = None;
+
+  for candidate in command_candidates(command) {
+    let mut cmd = Command::new(&candidate);
+
+    if let Some(dir) = working_dir {
+      cmd.current_dir(dir);
+    }
+
+    match cmd.args(args).output() {
+      Ok(output) => {
+        if output.status.success() {
+          return Ok(());
+        }
+
+        return Err(format!(
+          "{error_prefix}: exit status {} when running {}. Stdout: {}\nStderr: {}",
+          output.status,
+          candidate,
+          String::from_utf8_lossy(&output.stdout),
+          String::from_utf8_lossy(&output.stderr)
+        ));
+      }
+      Err(err) => last_error = Some(format!("{candidate}: {err}")),
+    }
+  }
+
+  let path = env::var("PATH").unwrap_or_else(|_| "<not set>".to_string());
+  let errors = last_error.unwrap_or_else(|| "unknown error".to_string());
+
+  Err(format!(
+    "{error_prefix}: failed to run {command}. Tried: {errors}. Ensure it is installed and available in PATH (current PATH: {path})."
+  ))
+}
+
+fn check_tool(command: &str, args: &[&str], name: &str) -> Result<(), String> {
+  run_command(
+    command,
+    args,
+    None,
+    &format!("{name} is not installed or not in PATH"),
+  )
+}
 
 fn vencord_repo_path(dir: &str) -> PathBuf {
   PathBuf::from(dir)
+}
+
+fn vencord_user_plugins_path(repo_dir: &Path) -> PathBuf {
+  repo_dir.join("src").join("userplugins")
+}
+
+fn repo_folder_name_from_url(url: &str) -> String {
+  let last = url
+    .trim_end_matches('/')
+    .rsplit('/')
+    .next()
+    .unwrap_or("userplugin");
+
+  last.trim_end_matches(".git").to_string()
+}
+
+fn sync_user_plugin_repos(plugin_urls: &[String], repo_dir: &Path) -> Result<(), String> {
+  if plugin_urls.is_empty() {
+    return Ok(());
+  }
+
+  let plugins_dir = vencord_user_plugins_path(repo_dir);
+
+  if plugins_dir.exists() {
+    fs::remove_dir_all(&plugins_dir)
+      .map_err(|err| format!("Failed to reset userplugins directory: {err}"))?;
+  }
+
+  fs::create_dir_all(&plugins_dir)
+    .map_err(|err| format!("Failed to create userplugins directory: {err}"))?;
+
+  for url in plugin_urls {
+    let folder_name = repo_folder_name_from_url(url);
+    let destination = plugins_dir.join(folder_name);
+    let destination_str = destination
+      .to_str()
+      .ok_or_else(|| "Invalid user plugin destination path".to_string())?;
+
+    run_git(&["clone", url, destination_str]).map_err(|err| {
+      format!(
+        "Failed to clone user plugin {url} into {}: {err}",
+        destination.display()
+      )
+    })?;
+  }
+
+  Ok(())
 }
 
 fn run_git(args: &[&str]) -> Result<(), String> {
@@ -31,7 +142,7 @@ fn is_git_repo(repo_path_str: &str) -> Result<bool, String> {
     return Ok(true);
   }
 
-  let stderr= String::from_utf8_lossy(&output.stderr);
+  let stderr = String::from_utf8_lossy(&output.stderr);
 
   if stderr.contains("not a git repository") {
     return Ok(false);
@@ -43,7 +154,11 @@ fn is_git_repo(repo_path_str: &str) -> Result<bool, String> {
   ))
 }
 
-pub fn sync_vencord_repo(repo_url: &str, repo_dir: &str) -> Result<String, String> {
+pub fn sync_vencord_repo(
+  repo_url: &str,
+  repo_dir: &str,
+  plugin_urls: &[String],
+) -> Result<String, String> {
   let repo_path = vencord_repo_path(repo_dir);
   let repo_path_str = repo_path
     .to_str()
@@ -83,5 +198,35 @@ pub fn sync_vencord_repo(repo_url: &str, repo_dir: &str) -> Result<String, Strin
     run_git(&["clone", repo_url, repo_path_str])?;
   }
 
+  sync_user_plugin_repos(plugin_urls, &repo_path)?;
+
   Ok(repo_path_str.to_string())
+}
+
+pub fn build_vencord_repo(repo_dir: &str) -> Result<String, String> {
+  check_tool("node", &["--version"], "Node.js")?;
+  check_tool("npm", &["--version"], "npm")?;
+
+  run_command(
+    "npm",
+    &["install", "-g", "pnpm"],
+    None,
+    "Failed to install pnpm via npm",
+  )?;
+
+  run_command(
+    "pnpm",
+    &["install"],
+    Some(repo_dir),
+    "Failed to install project dependencies with pnpm",
+  )?;
+
+  run_command(
+    "pnpm",
+    &["build"],
+    Some(repo_dir),
+    "Failed to build Vencord with pnpm",
+  )?;
+
+  Ok(format!("Vencord built successfully in {repo_dir}"))
 }

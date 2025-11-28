@@ -25,8 +25,8 @@ const STEP_DEFINITIONS: {
     },
     {
       id: "build",
-      title: "Build placeholder",
-      description: "Runs the stub build step used by the installer pipeline",
+      title: "Build Vencord source files",
+      description: "Installs requirements and builds the project",
     },
     {
       id: "inject",

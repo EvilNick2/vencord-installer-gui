@@ -274,3 +274,32 @@ pub fn update_user_options(options: OptionsResponse) -> Result<OptionsResponse, 
 pub fn read_user_options() -> Result<UserOptions, String> {
   load_options()
 }
+
+pub fn resolve_plugin_repositories(options: &UserOptions) -> Vec<String> {
+  let provided_enabled: HashMap<_, _> = options
+    .provided_repositories
+    .iter()
+    .map(|repo| (repo.id.clone(), repo.enabled))
+    .collect();
+
+  let mut urls: Vec<String> = PROVIDED_REPOSITORIES
+    .iter()
+    .filter(|repo| {
+      provided_enabled
+        .get(&repo.id)
+        .copied()
+        .unwrap_or(repo.default_enabled)
+    })
+    .map(|repo| repo.url.clone())
+    .collect();
+
+  urls.extend(
+    options
+      .user_repositories
+      .iter()
+      .filter(|url| !url.trim().is_empty())
+      .cloned(),
+  );
+
+  urls
+}
