@@ -49,11 +49,27 @@ export type FlowStepResult<T> = {
 export type PatchFlowResult = {
   closeDiscord: FlowStepResult<string[]>;
   backup: FlowStepResult<BackupResult>;
-  cloneRepo: FlowStepResult<string>;
+  syncRepo: FlowStepResult<string>;
   build: FlowStepResult<string>;
   inject: FlowStepResult<string>;
   reopenDiscord: FlowStepResult<string[]>;
 };
+
+export type DevTestStep = 
+  | "closeDiscord"
+  | "backup"
+  | "syncRepo"
+  | "build"
+  | "inject"
+  | "reopenDiscord";
+
+export type DevModuleResult =
+  | { kind: "closeDiscord"; closedClients: string[]; closingSkipped: boolean }
+  | { kind: "backup"; result: BackupResult }
+  | { kind: "syncRepo"; path: string }
+  | { kind: "build"; message?: string; path?: string }
+  | { kind: "inject"; message?: string; path?: string }
+  | { kind: "reopenDiscord"; restarted: string[]; closedClients: string[]; closingSkipped: boolean; };
 
 export async function getDiscordInstalls(): Promise<DiscordInstall[]> {
   return await invoke<DiscordInstall[]>("get_discord_installs")
@@ -73,6 +89,13 @@ export async function backupVencordInstall(sourcePath: string): Promise<BackupRe
 
 export async function runPatchFlow(sourcePath: string): Promise<PatchFlowResult> {
   return await invoke<PatchFlowResult>("run_patch_flow", { sourcePath });
+}
+
+export async function runDevTest(
+  step: DevTestStep,
+  sourcePath?: string
+): Promise<DevModuleResult> {
+  return await invoke<DevModuleResult>("run_dev_test", { step, sourcePath });
 }
 
 export async function listDiscordProcesses(): Promise<DiscordProcess[]> {

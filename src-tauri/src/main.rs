@@ -21,6 +21,7 @@ fn main() {
           flows::backup::backup_vencord_install,
           flows::discord_clients::list_discord_processes,
           flows::pipeline::run_patch_flow,
+          flows::pipeline::run_dev_test,
           discord::get_discord_installs,
           options::get_user_options,
           options::update_user_options,

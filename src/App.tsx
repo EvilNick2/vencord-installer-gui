@@ -2,10 +2,11 @@ import { useRef, useState } from 'react'
 import HomePage from "./pages/HomePage";
 import InstallPage from "./pages/InstallPage";
 import LogsPage from "./pages/LogsPage";
+import DevTestsPage from "./pages/DevTestsPage";
 import SettingsPage from "./pages/SettingsPage";
 import './App.css'
 
-type Page = 'home' | 'install' | 'logs' | 'settings';
+type Page = 'home' | 'install' | 'logs' | 'settings' | 'devTests';
 
 function App() {
   const [page, setPage] = useState<Page>('home');
@@ -37,6 +38,7 @@ function App() {
           <button onClick={() => handleNavigate('home')}>Overview</button>
           <button onClick={() => handleNavigate('install')}>Install / Repair</button>
           <button onClick={() => handleNavigate('logs')}>Logs</button>
+          <button onClick={() => handleNavigate('devTests')}>Development Tests</button>
           <button onClick={() => handleNavigate('settings')}>Settings</button>
         </nav>
       </aside>
@@ -45,6 +47,7 @@ function App() {
         {page === 'home' && <HomePage />}
         {page === 'install' && <InstallPage />}
         {page === 'logs' && <LogsPage />}
+        {page === 'devTests' && <DevTestsPage />}
         {page === 'settings' && (
           <SettingsPage onPendingChange={(pending) => updateSettingsPending(pending)} />
         )}
