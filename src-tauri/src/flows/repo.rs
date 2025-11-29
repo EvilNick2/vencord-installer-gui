@@ -230,3 +230,25 @@ pub fn build_vencord_repo(repo_dir: &str) -> Result<String, String> {
 
   Ok(format!("Vencord built successfully in {repo_dir}"))
 }
+
+pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<String, String> {
+  if locations.is_empty() {
+    return Ok("No Discord clients selected for injection; skipping".to_string());
+  }
+
+  check_tool("pnpm", &["--version"], "pnpm")?;
+
+  for location in locations {
+    run_command(
+      "pnpm",
+      &["inject", "-location", location],
+      Some(repo_dir),
+      &format!("Failed to inject Vencord into {location} with pnpm"),
+    )?;
+  }
+
+  Ok(format!(
+    "Injected Vencord into {} Discord client(s)",
+    locations.len()
+  ))
+}

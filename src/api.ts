@@ -21,6 +21,7 @@ export type UserOptions = {
   userRepositories: string[];
   providedRepositories: ProvidedRepository[];
   closeDiscordOnBackup: boolean;
+  selectedDiscordClients: string[];
 };
 
 export type BackupResult = {
@@ -100,4 +101,10 @@ export async function runDevTest(
 
 export async function listDiscordProcesses(): Promise<DiscordProcess[]> {
   return await invoke<DiscordProcess[]>("list_discord_processes");
+}
+
+export async function updateSelectedDiscordClients(
+  selected: string[],
+): Promise<void> {
+  await invoke("update_selected_discord_clients", { selected });
 }

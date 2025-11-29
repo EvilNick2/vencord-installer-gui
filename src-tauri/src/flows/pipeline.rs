@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-use crate::options;
+use crate::{discord, options};
 
 use super::{backup, discord_clients, repo};
 
@@ -16,6 +16,7 @@ pub enum DevTestStep {
   ReopenDiscord,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StepStatus {
@@ -49,6 +50,7 @@ impl<T> StepResult<T> {
     }
   }
 
+  #[allow(dead_code)]
   pub fn pending(message: impl Into<String>) -> Self {
     Self {
       status: StepStatus::Pending,
@@ -56,6 +58,33 @@ impl<T> StepResult<T> {
       detail: None,
     }
   }
+}
+
+fn resolve_selected_discord_locations(selected_ids: &[String]) -> Result<Vec<String>, String> {
+  if selected_ids.is_empty() {
+    return Ok(Vec::new());
+  }
+
+  let installs = discord::get_discord_installs();
+  let mut locations = Vec::new();
+  let mut missing = Vec::new();
+
+  for id in selected_ids {
+    if let Some(install) = installs.iter().find(|inst| &inst.id == id) {
+      locations.push(install.path.clone());
+    } else {
+      missing.push(id.clone());
+    }
+  }
+
+  if !missing.is_empty() {
+    return Err(format!(
+      "The following Discord client selections are not installed: {}",
+      missing.join(", ")
+    ));
+  }
+
+  Ok(locations)
 }
 
 #[derive(Serialize)]
@@ -147,7 +176,32 @@ pub fn run_patch_flow(source_path: String) -> Result<PatchFlowResult, String> {
       return Err(err);
     }
   };
-  let inject_step = StepResult::pending("Inject step placeholder; add patching logic after build");
+  let inject_locations = match resolve_selected_discord_locations(&options.selected_discord_clients)
+  {
+    Ok(locations) => locations,
+    Err(err) => {
+      if !discord_state.closing_skipped {
+        let _ = discord_clients::restart_processes(&discord_state.processes);
+      }
+
+      return Err(err);
+    }
+  };
+
+  let inject_step = if inject_locations.is_empty() {
+    StepResult::skipped("No Discord clients selected for injection")
+  } else {
+    match repo::inject_vencord_repo(&sync_path, &inject_locations) {
+      Ok(message) => StepResult::completed(message),
+      Err(err) => {
+        if !discord_state.closing_skipped {
+          let _ = discord_clients::restart_processes(&discord_state.processes);
+        }
+
+        return Err(err);
+      }
+    }
+  };
 
   let reopen_step = if discord_state.closing_skipped {
     StepResult::skipped("Discord was not closed; no restart needed")
@@ -220,9 +274,20 @@ pub fn run_dev_test(
         path: Some(options.vencord_repo_dir),
       })
     }
-    DevTestStep::Inject => Ok(DevTestResult::Inject {
-      message: "Inject step placeholder; add patching logic after build".to_string(),
-    }),
+    DevTestStep::Inject => {
+      let options = options::read_user_options()?;
+      let locations = resolve_selected_discord_locations(&options.selected_discord_clients)?;
+
+      if locations.is_empty() {
+        return Ok(DevTestResult::Inject {
+          message: "No Discord clients selected for injection".to_string(),
+        });
+      }
+
+      let message = repo::inject_vencord_repo(&options.vencord_repo_dir, &locations)?;
+
+      Ok(DevTestResult::Inject { message })
+    }
     DevTestStep::ReopenDiscord => {
       let last_closed = discord_clients::take_last_closed_state();
 

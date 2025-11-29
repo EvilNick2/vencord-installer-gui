@@ -25,6 +25,7 @@ fn main() {
           discord::get_discord_installs,
           options::get_user_options,
           options::update_user_options,
+          options::update_selected_discord_clients,
         ]),
   )
   .run(tauri::generate_context!())

@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-import { getDiscordInstalls, listDiscordProcesses } from "../api";
-import type { DiscordInstall, DiscordProcess } from "../api";
+import {
+  getDiscordInstalls,
+  getUserOptions,
+  listDiscordProcesses,
+  updateSelectedDiscordClients,
+} from "../api";
+import type { DiscordInstall, DiscordProcess, UserOptions } from "../api";
 
 const DISCORD_PROCESS_ORDER = ["discord", "discordptb", "discordcanary"] as const;
 
@@ -14,15 +19,33 @@ export default function InstallPage() {
   const [openClients, setOpenClients] = useState<DiscordProcess[]>([]);
   const [processError, setProcessError] = useState<string | null>(null);
   const [processLoading, setProcessLoading] = useState(true);
+  const [options, setOptions] = useState<UserOptions | null>(null);
 
   useEffect(() => {
-    getDiscordInstalls()
-      .then((data) => {
-        setInstalls(data);
+    Promise.all([getDiscordInstalls(), getUserOptions()])
+      .then(([installsData, userOptions]) => {
+        setInstalls(installsData);
+        setOptions(userOptions);
 
-        const stable = data.find((d) => d.id === 'stable');
+        const availableIds = new Set(installsData.map((inst) => inst.id));
+        const savedSelection = userOptions.selectedDiscordClients.filter((id) => 
+          availableIds.has(id)
+        );
+
+        if (savedSelection.length > 0) {
+          setSelectedIds(savedSelection);
+          updateSelectedDiscordClients(savedSelection).catch((err) =>
+            setError(String(err))
+          );
+          return;
+        }
+
+        const stable = installsData.find((d) => d.id === 'stable');
         if (stable) {
           setSelectedIds([stable.id]);
+          updateSelectedDiscordClients([stable.id]).catch((err) =>
+            setError(String(err))
+          );
         } else {
           setSelectedIds([]);
         }
@@ -73,9 +96,21 @@ export default function InstallPage() {
   }, []);
 
   const toggle = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setError(null);
+    setSelectedIds((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id];
+
+      updateSelectedDiscordClients(next).catch((err) => setError(String(err)));
+
+      if (options) {
+        updateSelectedDiscordClients(next).catch((err) => setError(String(err)));
+        setOptions({ ...options, selectedDiscordClients: next });
+      }
+
+      return next;
+    });
   };
 
   return (

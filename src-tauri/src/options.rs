@@ -76,6 +76,8 @@ pub struct OptionsResponse {
   pub provided_repositories: Vec<ProvidedRepositoryView>,
   #[serde(default = "default_true")]
   pub close_discord_on_backup: bool,
+  #[serde(default)]
+  pub selected_discord_clients: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -90,6 +92,8 @@ pub struct UserOptions {
   pub provided_repositories: Vec<ProvidedRepositoryState>,
   #[serde(default = "default_true")]
   pub close_discord_on_backup: bool,
+  #[serde(default)]
+  pub selected_discord_clients: Vec<String>,
 }
 
 impl Default for UserOptions {
@@ -107,6 +111,7 @@ impl Default for UserOptions {
         })
         .collect(),
       close_discord_on_backup: default_true(),
+      selected_discord_clients: Vec::new(),
     }
   }
 }
@@ -227,6 +232,7 @@ fn to_response(options: UserOptions) -> OptionsResponse {
     user_repositories: options.user_repositories,
     provided_repositories: merge_provided_repositories(&options.provided_repositories),
     close_discord_on_backup: options.close_discord_on_backup,
+    selected_discord_clients: options.selected_discord_clients,
   }
 }
 
@@ -253,6 +259,7 @@ fn to_storage(options: OptionsResponse) -> UserOptions {
     user_repositories: options.user_repositories,
     provided_repositories,
     close_discord_on_backup: options.close_discord_on_backup,
+    selected_discord_clients: options.selected_discord_clients,
   }
 }
 
@@ -273,6 +280,15 @@ pub fn update_user_options(options: OptionsResponse) -> Result<OptionsResponse, 
 
 pub fn read_user_options() -> Result<UserOptions, String> {
   load_options()
+}
+
+#[tauri::command]
+pub fn update_selected_discord_clients(selected: Vec<String>) -> Result<(), String> {
+  let mut options = read_user_options()?;
+
+  options.selected_discord_clients = selected;
+
+  save_options(&options)
 }
 
 pub fn resolve_plugin_repositories(options: &UserOptions) -> Vec<String> {

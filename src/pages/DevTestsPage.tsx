@@ -30,8 +30,8 @@ const STEP_DEFINITIONS: {
     },
     {
       id: "inject",
-      title: "Inject placeholder",
-      description: "Runs the stub inject step used by the installer pipeline",
+      title: "Inject Vencord",
+      description: "Injects the build vencord process into selected discord installs",
     },
     {
       id: "reopenDiscord",
