@@ -20,6 +20,10 @@ fn default_repo_base_dir() -> String {
     .into_owned()
 }
 
+fn default_selected_discord_clients() -> Vec<String> {
+  vec!["stable".to_string()]
+}
+
 fn legacy_repo_base_dir() -> String {
   let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
   let home_dir = env::var(home_var).unwrap_or_else(|_| ".".to_string());
@@ -76,7 +80,7 @@ pub struct OptionsResponse {
   pub provided_repositories: Vec<ProvidedRepositoryView>,
   #[serde(default = "default_true")]
   pub close_discord_on_backup: bool,
-  #[serde(default)]
+  #[serde(default = "default_selected_discord_clients")]
   pub selected_discord_clients: Vec<String>,
 }
 
@@ -92,7 +96,7 @@ pub struct UserOptions {
   pub provided_repositories: Vec<ProvidedRepositoryState>,
   #[serde(default = "default_true")]
   pub close_discord_on_backup: bool,
-  #[serde(default)]
+  #[serde(default = "default_selected_discord_clients")]
   pub selected_discord_clients: Vec<String>,
 }
 
@@ -111,7 +115,7 @@ impl Default for UserOptions {
         })
         .collect(),
       close_discord_on_backup: default_true(),
-      selected_discord_clients: Vec::new(),
+      selected_discord_clients: default_selected_discord_clients(),
     }
   }
 }

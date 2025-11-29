@@ -64,9 +64,9 @@ const DISCORD_PROCESSES: &[&str] = &["discord", "discordptb", "discordcanary"];
 fn matches_known_process_name(name: &str) -> bool {
   let name = name.to_lowercase();
 
-  DISCORD_PROCESSES.iter().any(|entry| {
-    name == *entry || name == format!("{entry}.exe")
-  })
+  DISCORD_PROCESSES
+    .iter()
+    .any(|entry| name == *entry || name == format!("{entry}.exe"))
 }
 
 fn serialize_pid<S>(pid: &Pid, serializer: S) -> Result<S::Ok, S::Error>
@@ -78,10 +78,7 @@ where
 
 fn is_discord_process(process: &Process) -> bool {
   if let Some(exe) = process.exe() {
-    if let Some(file_name) = exe
-      .file_stem()
-      .and_then(|stem| stem.to_str())
-    {
+    if let Some(file_name) = exe.file_stem().and_then(|stem| stem.to_str()) {
       if matches_known_process_name(file_name) {
         return true;
       }
@@ -199,13 +196,10 @@ pub fn close_processes(processes: &[DiscordProcess]) -> Vec<DiscordProcess> {
 }
 
 fn restart_process(proc: &DiscordProcess) -> Result<String, String> {
-  let (program, args): (PathBuf, Vec<String>) = if let Some(exe) = &proc.exe {
-    (exe.clone(), proc.cmd.iter().skip(1).cloned().collect())
+  let program = if let Some(exe) = &proc.exe {
+    exe.clone()
   } else if let Some(first) = proc.cmd.first() {
-    (
-      PathBuf::from(first),
-      proc.cmd.iter().skip(1).cloned().collect(),
-    )
+    PathBuf::from(first)
   } else {
     return Err(format!(
       "Could not determine restart command for Discord process {}",
@@ -216,7 +210,6 @@ fn restart_process(proc: &DiscordProcess) -> Result<String, String> {
   let mut command = Command::new(program);
 
   command
-    .args(args)
     .stdin(Stdio::null())
     .stdout(Stdio::null())
     .stderr(Stdio::null());

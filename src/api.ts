@@ -88,8 +88,8 @@ export async function backupVencordInstall(sourcePath: string): Promise<BackupRe
   return await invoke<BackupResult>("backup_vencord_install", { sourcePath });
 }
 
-export async function runPatchFlow(sourcePath: string): Promise<PatchFlowResult> {
-  return await invoke<PatchFlowResult>("run_patch_flow", { sourcePath });
+export async function runPatchFlow(): Promise<PatchFlowResult> {
+  return await invoke<PatchFlowResult>("run_patch_flow");
 }
 
 export async function runDevTest(

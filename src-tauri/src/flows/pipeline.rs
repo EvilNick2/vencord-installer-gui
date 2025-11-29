@@ -126,7 +126,7 @@ pub enum DevTestResult {
 }
 
 #[tauri::command]
-pub fn run_patch_flow(source_path: String) -> Result<PatchFlowResult, String> {
+pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
   let options = options::read_user_options()?;
   let plugin_urls = options::resolve_plugin_repositories(&options);
 
@@ -138,10 +138,12 @@ pub fn run_patch_flow(source_path: String) -> Result<PatchFlowResult, String> {
     StepResult::completed(discord_state.closed_clients.clone())
   };
 
-  let backup_path = backup::move_vencord_install(Path::new(&source_path))?;
+  let vencord_install = Path::new(&options.vencord_repo_dir);
+
+  let backup_path = backup::move_vencord_install(&vencord_install)?;
 
   let backup_result = backup::BackupResult {
-    source_path: source_path.clone(),
+    source_path: vencord_install.to_string_lossy().into_owned(),
     backup_path: backup_path.to_string_lossy().into_owned(),
     closed_clients: discord_state.closed_clients.clone(),
     restarted_clients: Vec::new(),
