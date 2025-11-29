@@ -30,16 +30,24 @@ fn detect_discord_installs() -> Vec<DiscordInstall> {
   {
     use std::env;
 
-    if let Ok(roaming) = env::var("APPDATA") {
-      let base = PathBuf::from(roaming);
+    let add_from_env = |var: &str, installs: &mut Vec<DiscordInstall>| {
+      if let Ok(path) = env::var(var) {
+        let base = PathBuf::from(path);
 
-      let candidates = [
-        ("stable", "Discord Stable", base.join("discord")),
-        ("ptb", "Discord PTB", base.join("discordptb")),
-        ("canary", "Discord Canary", base.join("discordcanary")),
-      ];
+        let candidates = [
+          ("stable", "Discord Stable", base.join("Discord")),
+          ("ptb", "Discord PTB", base.join("DiscordPTB")),
+          ("canary", "Discord Canary", base.join("DiscordCanary")),
+        ];
 
-      add_candidates(&mut installs, &candidates);
+        add_candidates(installs, &candidates);
+      }
+    };
+
+    add_from_env("LOCALAPPDATA", &mut installs);
+
+    if installs.is_empty() {
+      add_from_env("APPDATA", &mut installs);
     }
   }
 
