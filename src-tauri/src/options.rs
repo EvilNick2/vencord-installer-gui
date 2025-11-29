@@ -46,9 +46,24 @@ struct ProvidedRepository {
   default_enabled: bool,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProvidedTheme {
+  id: String,
+  name: String,
+  url: String,
+  description: String,
+  default_enabled: bool,
+}
+
 static PROVIDED_REPOSITORIES: Lazy<Vec<ProvidedRepository>> = Lazy::new(|| {
   serde_json::from_str(include_str!("provided_repositories.json"))
     .expect("Failed to parse provided_repositories.json")
+});
+
+static PROVIDED_THEMES: Lazy<Vec<ProvidedTheme>> = Lazy::new(|| {
+  serde_json::from_str(include_str!("provided_themes.json"))
+    .expect("Failed to parse provided_themes.json")
 });
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -69,6 +84,31 @@ pub struct ProvidedRepositoryView {
   pub enabled: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvidedThemeState {
+  pub id: String,
+  pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvidedThemeView {
+  pub id: String,
+  pub name: String,
+  pub url: String,
+  pub description: String,
+  pub default_enabled: bool,
+  pub enabled: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct ProvidedThemeInfo {
+  pub id: String,
+  pub name: String,
+  pub url: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptionsResponse {
@@ -77,7 +117,11 @@ pub struct OptionsResponse {
   pub vencord_repo_dir: String,
   pub user_repositories: Vec<String>,
   #[serde(default)]
+  pub user_themes: Vec<String>,
+  #[serde(default)]
   pub provided_repositories: Vec<ProvidedRepositoryView>,
+  #[serde(default)]
+  pub provided_themes: Vec<ProvidedThemeView>,
   #[serde(default = "default_true")]
   pub close_discord_on_backup: bool,
   #[serde(default = "default_selected_discord_clients")]
@@ -93,7 +137,11 @@ pub struct UserOptions {
   pub vencord_repo_url_default: Option<String>,
   pub user_repositories: Vec<String>,
   #[serde(default)]
+  pub user_themes: Vec<String>,
+  #[serde(default)]
   pub provided_repositories: Vec<ProvidedRepositoryState>,
+  #[serde(default)]
+  pub provided_themes: Vec<ProvidedThemeState>,
   #[serde(default = "default_true")]
   pub close_discord_on_backup: bool,
   #[serde(default = "default_selected_discord_clients")]
@@ -107,11 +155,19 @@ impl Default for UserOptions {
       vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
       vencord_repo_dir: default_repo_base_dir(),
       user_repositories: Vec::new(),
+      user_themes: Vec::new(),
       provided_repositories: PROVIDED_REPOSITORIES
         .iter()
         .map(|repo| ProvidedRepositoryState {
           id: repo.id.clone(),
           enabled: repo.default_enabled,
+        })
+        .collect(),
+      provided_themes: PROVIDED_THEMES
+        .iter()
+        .map(|theme| ProvidedThemeState {
+          id: theme.id.clone(),
+          enabled: theme.default_enabled,
         })
         .collect(),
       close_discord_on_backup: default_true(),
@@ -178,6 +234,24 @@ fn reconcile_options(mut options: UserOptions) -> Result<UserOptions, String> {
     updated = true;
   }
 
+  let themes: Vec<ProvidedThemeState> = PROVIDED_THEMES
+    .iter()
+    .map(|theme| ProvidedThemeState {
+      id: theme.id.clone(),
+      enabled: options
+        .provided_themes
+        .iter()
+        .find(|entry| entry.id == theme.id)
+        .map(|entry| entry.enabled)
+        .unwrap_or(theme.default_enabled),
+    })
+    .collect();
+
+  if themes != options.provided_themes {
+    options.provided_themes = themes;
+    updated = true;
+  }
+
   if updated {
     save_options(&options)?;
   }
@@ -229,12 +303,40 @@ fn merge_provided_repositories(saved: &[ProvidedRepositoryState]) -> Vec<Provide
     .collect()
 }
 
+fn merge_provided_themes(saved: &[ProvidedThemeState]) -> Vec<ProvidedThemeView> {
+  let saved_map: HashMap<String, bool> = saved
+    .iter()
+    .map(|entry| (entry.id.clone(), entry.enabled))
+    .collect();
+
+  PROVIDED_THEMES
+    .iter()
+    .map(|theme| {
+      let enabled = saved_map
+        .get(&theme.id)
+        .copied()
+        .unwrap_or(theme.default_enabled);
+
+      ProvidedThemeView {
+        id: theme.id.clone(),
+        name: theme.name.clone(),
+        url: theme.url.clone(),
+        description: theme.description.clone(),
+        default_enabled: theme.default_enabled,
+        enabled,
+      }
+    })
+    .collect()
+}
+
 fn to_response(options: UserOptions) -> OptionsResponse {
   OptionsResponse {
     vencord_repo_url: options.vencord_repo_url,
     vencord_repo_dir: options.vencord_repo_dir,
     user_repositories: options.user_repositories,
+    user_themes: options.user_themes,
     provided_repositories: merge_provided_repositories(&options.provided_repositories),
+    provided_themes: merge_provided_themes(&options.provided_themes),
     close_discord_on_backup: options.close_discord_on_backup,
     selected_discord_clients: options.selected_discord_clients,
   }
@@ -256,12 +358,29 @@ fn to_storage(options: OptionsResponse) -> UserOptions {
     })
     .collect();
 
+  let theme_ids: HashMap<_, _> = PROVIDED_THEMES
+    .iter()
+    .map(|theme| (theme.id.clone(), theme.default_enabled))
+    .collect();
+
+  let provided_themes = options
+    .provided_themes
+    .into_iter()
+    .filter(|theme| theme_ids.contains_key(&theme.id))
+    .map(|theme| ProvidedThemeState {
+      id: theme.id,
+      enabled: theme.enabled,
+    })
+    .collect();
+
   UserOptions {
     vencord_repo_url: options.vencord_repo_url,
     vencord_repo_url_default: Some(DEFAULT_VENCORD_REPO_URL.to_string()),
     vencord_repo_dir: options.vencord_repo_dir,
     user_repositories: options.user_repositories,
+    user_themes: options.user_themes,
     provided_repositories,
+    provided_themes,
     close_discord_on_backup: options.close_discord_on_backup,
     selected_discord_clients: options.selected_discord_clients,
   }
@@ -322,4 +441,58 @@ pub fn resolve_plugin_repositories(options: &UserOptions) -> Vec<String> {
   );
 
   urls
+}
+
+pub fn resolve_themes(options: &UserOptions) -> Vec<ProvidedThemeInfo> {
+  let provided_enabled: HashMap<_, _> = options
+    .provided_themes
+    .iter()
+    .map(|theme| (theme.id.clone(), theme.enabled))
+    .collect();
+
+  let mut themes: Vec<ProvidedThemeInfo> = PROVIDED_THEMES
+    .iter()
+    .filter(|theme| {
+      provided_enabled
+        .get(&theme.id)
+        .copied()
+        .unwrap_or(theme.default_enabled)
+    })
+    .map(|theme| ProvidedThemeInfo {
+      id: theme.id.clone(),
+      name: theme.name.clone(),
+      url: theme.url.clone(),
+    })
+    .collect();
+
+  let base_index = themes.len();
+
+  let user_theme_entries = options
+    .user_themes
+    .iter()
+    .enumerate()
+    .filter_map(|(idx, url)| {
+      let trimmed = url.trim();
+
+      if trimmed.is_empty() {
+        return None;
+      }
+
+      let id = format!("user-theme-{}", base_index + idx);
+      let name = trimmed
+        .rsplit('/')
+        .next()
+        .filter(|segment| !segment.is_empty())
+        .unwrap_or(trimmed);
+
+      Some(ProvidedThemeInfo {
+        id,
+        name: name.to_string(),
+        url: trimmed.to_string(),
+      })
+    });
+
+  themes.extend(user_theme_entries);
+
+  themes
 }

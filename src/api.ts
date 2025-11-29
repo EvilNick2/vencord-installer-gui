@@ -15,11 +15,22 @@ export type ProvidedRepository = {
   enabled: boolean;
 };
 
+export type ProvidedTheme = {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+  defaultEnabled: string;
+  enabled: boolean;
+}
+
 export type UserOptions = {
   vencordRepoUrl: string;
   vencordRepoDir: string;
   userRepositories: string[];
+  userThemes: string[];
   providedRepositories: ProvidedRepository[];
+  providedThemes: ProvidedTheme[];
   closeDiscordOnBackup: boolean;
   selectedDiscordClients: string[];
 };
@@ -53,6 +64,7 @@ export type PatchFlowResult = {
   syncRepo: FlowStepResult<string>;
   build: FlowStepResult<string>;
   inject: FlowStepResult<string>;
+  downloadThemes: FlowStepResult<string>;
   reopenDiscord: FlowStepResult<string[]>;
 };
 
@@ -62,6 +74,7 @@ export type DevTestStep =
   | "syncRepo"
   | "build"
   | "inject"
+  | "downloadThemes"
   | "reopenDiscord";
 
 export type DevModuleResult =
@@ -70,6 +83,7 @@ export type DevModuleResult =
   | { kind: "syncRepo"; path: string }
   | { kind: "build"; message?: string; path?: string }
   | { kind: "inject"; message?: string; path?: string }
+  | { kind: "downloadThemes"; message?: string }
   | { kind: "reopenDiscord"; restarted: string[]; closedClients: string[]; closingSkipped: boolean; };
 
 export async function getDiscordInstalls(): Promise<DiscordInstall[]> {

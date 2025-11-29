@@ -4,7 +4,7 @@ use std::{fs, io, path::Path, path::PathBuf};
 
 use crate::{config::app_config_dir, options};
 
-use super::discord_clients;
+use super::{discord_clients, themes};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,7 +28,16 @@ fn backup_destination() -> Result<PathBuf, String> {
 
   let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
 
-  Ok(backups.join(format!("vencord-{timestamp}")))
+  let destination = backups.join(format!("{timestamp}"));
+
+  fs::create_dir_all(&destination).map_err(|err| {
+    format!(
+      "Failed to create backup directory {}: {err}",
+      destination.display()
+    )
+  })?;
+
+  Ok(destination)
 }
 
 fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<(), String> {
@@ -95,7 +104,15 @@ pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
     return Err(err);
   }
 
-  let destination = backup_destination()?;
+  let destination_root = backup_destination()?;
+  let destination = destination_root.join("vencord");
+
+  fs::create_dir_all(&destination_root).map_err(|err| {
+    format!(
+      "Failed to create backup directory {}: {err}",
+      destination_root.display()
+    )
+  })?;
 
   if let Err(err) = fs::rename(source, &destination) {
     if !is_cross_device_link(&err) {
@@ -127,7 +144,9 @@ pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
     }
   }
 
-  Ok(destination)
+  themes::move_themes_to_backup(&destination_root)?;
+
+  Ok(destination_root)
 }
 
 fn remove_node_modules(source: &Path) -> Result<(), String> {
@@ -193,6 +212,16 @@ pub fn backup_vencord_install(source_path: String) -> Result<BackupResult, Strin
   }
 
   let backup_path = move_result?;
+
+  let theme_sources = options::resolve_themes(&options);
+
+  if let Err(err) = themes::download_themes(&theme_sources) {
+    if !discord_state.closing_skipped {
+      let _ = discord_clients::restart_processes(&discord_state.processes);
+    }
+
+    return Err(err);
+  }
 
   let restarted = if discord_state.closing_skipped {
     Vec::new()

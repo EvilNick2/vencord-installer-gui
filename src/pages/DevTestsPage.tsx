@@ -34,6 +34,11 @@ const STEP_DEFINITIONS: {
       description: "Injects the build vencord process into selected discord installs",
     },
     {
+      id: "downloadThemes",
+      title: "Download themes",
+      description: "Downloads a curated set of themes into the Vencord themes folder"
+    },
+    {
       id: "reopenDiscord",
       title: "Reopen Discord",
       description: "Restarts any Discord processes that the Close Discord test previously stopped",
@@ -83,6 +88,8 @@ function summarizeResult(result: DevModuleResult): string {
     case "build":
     case "inject":
       return result.message || result.path || `${result.kind} step completed`;
+    case "downloadThemes":
+      return result.message || "Themes downloaded";
     case "reopenDiscord": {
       if (result.closingSkipped) {
         return "Discord restart skipped because closing is disabled in settings";

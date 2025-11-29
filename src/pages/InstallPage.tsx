@@ -44,6 +44,11 @@ const FLOW_STEPS: { id: keyof PatchFlowResult; title: string; description: strin
     description: "Installs the patched files into the selected Discord client(s)",
   },
   {
+    id: "downloadThemes",
+    title: "Download themes",
+    description: "Fetches a set of community themes into your Vencord folder",
+  },
+  {
     id: "reopenDiscord",
     title: "Reopen Discord",
     description: "Starts Discord again after patching completes",
@@ -121,6 +126,10 @@ const describeStep = (
     case "inject": {
       const detail = result.detail as string | undefined;
       return detail || "Injected Vencord into Discord";
+    }
+    case "downloadThemes": {
+      const detail = result.detail as string | undefined;
+      return detail || "Downloaded themes";
     }
     case "reopenDiscord": {
       const detail = result.detail as string[] | undefined;
@@ -292,7 +301,7 @@ export default function InstallPage() {
           <h2>Install / Repair Vencord</h2>
           <p className="muted">
             Run the full patcher pipeline in one click. The installer will close Discord,
-            back up your files, sync the repository, build, inject, and finally reopen
+            back up your files, sync the repository, build, inject, download themes, and finally reopen
             your client.
           </p>
         </div>

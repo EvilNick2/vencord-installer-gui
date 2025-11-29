@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::{discord, options};
 
-use super::{backup, discord_clients, repo};
+use super::{backup, discord_clients, repo, themes};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -13,6 +13,7 @@ pub enum DevTestStep {
   SyncRepo,
   Build,
   Inject,
+  DownloadThemes,
   ReopenDiscord,
 }
 
@@ -95,6 +96,7 @@ pub struct PatchFlowResult {
   pub sync_repo: StepResult<String>,
   pub build: StepResult<String>,
   pub inject: StepResult<String>,
+  pub download_themes: StepResult<String>,
   pub reopen_discord: StepResult<Vec<String>>,
 }
 
@@ -118,6 +120,9 @@ pub enum DevTestResult {
   Inject {
     message: String,
   },
+  DownloadThemes {
+    message: String,
+  },
   ReopenDiscord {
     restarted: Vec<String>,
     closed_clients: Vec<String>,
@@ -129,6 +134,7 @@ pub enum DevTestResult {
 pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
   let options = options::read_user_options()?;
   let plugin_urls = options::resolve_plugin_repositories(&options);
+  let themes = options::resolve_themes(&options);
 
   let discord_state = discord_clients::close_discord_clients(options.close_discord_on_backup);
 
@@ -205,6 +211,21 @@ pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
     }
   };
 
+  let themes_step = if themes.is_empty() {
+    StepResult::skipped("No themes enabled; skipping download")
+  } else {
+    match themes::download_themes(&themes) {
+      Ok(message) => StepResult::completed(message),
+      Err(err) => {
+        if !discord_state.closing_skipped {
+          let _ = discord_clients::restart_processes(&discord_state.processes);
+        }
+
+        return Err(err);
+      }
+    }
+  };
+
   let reopen_step = if discord_state.closing_skipped {
     StepResult::skipped("Discord was not closed; no restart needed")
   } else {
@@ -218,6 +239,7 @@ pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
     sync_repo: sync_step,
     build: build_step,
     inject: inject_step,
+    download_themes: themes_step,
     reopen_discord: reopen_step,
   })
 }
@@ -289,6 +311,20 @@ pub fn run_dev_test(
       let message = repo::inject_vencord_repo(&options.vencord_repo_dir, &locations)?;
 
       Ok(DevTestResult::Inject { message })
+    }
+    DevTestStep::DownloadThemes => {
+      let options = options::read_user_options()?;
+      let themes = options::resolve_themes(&options);
+
+      if themes.is_empty() {
+        return Ok(DevTestResult::DownloadThemes {
+          message: "No themes enabled; skipping download".to_string(),
+        });
+      }
+
+      let message = themes::download_themes(&themes)?;
+
+      Ok(DevTestResult::DownloadThemes { message })
     }
     DevTestStep::ReopenDiscord => {
       let last_closed = discord_clients::take_last_closed_state();

@@ -9,6 +9,7 @@ export default function SettingsPage({
 }) {
   const [options, setOptions] = useState<UserOptions | null>(null);
   const [userReposText, setUserReposText] = useState('');
+  const [userThemesText, setUserThemesText] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +18,7 @@ export default function SettingsPage({
     repoUrl: false,
     repoDir: false,
     userRepos: false,
+    userThemes: false,
   });
 
   useEffect(() => {
@@ -29,7 +31,8 @@ export default function SettingsPage({
       .finally(() => setLoading(false));
   }, []);
 
-  const hasPending = saving || dirtyFields.repoUrl || dirtyFields.repoDir || dirtyFields.userRepos;
+  const hasPending =
+    saving || dirtyFields.repoUrl || dirtyFields.repoDir || dirtyFields.userRepos || dirtyFields.userThemes;
 
   useEffect(() => {
     onPendingChange?.(hasPending);
@@ -41,7 +44,10 @@ export default function SettingsPage({
 
   const saveOptions = async (
     nextOptions: UserOptions,
-    { syncUserReposText }: { syncUserReposText: boolean },
+    {
+      syncUserReposText,
+      syncUserThemesText = false,
+    }: { syncUserReposText: boolean; syncUserThemesText?: boolean },
   ): Promise<boolean> => {
     setSaving(true);
     setError(null);
@@ -57,6 +63,10 @@ export default function SettingsPage({
         setUserReposText(updated.userRepositories.join("\n"));
       }
 
+      if (syncUserThemesText) {
+        setUserThemesText(updated.userThemes.join("\n"));
+      }
+
       setMessage('Options saved');
       return true;
     } catch (err) {
@@ -68,6 +78,12 @@ export default function SettingsPage({
   };
 
   const parseUserReposText = () =>
+    userReposText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
+  const parseUserThemesText = () =>
     userReposText
       .split("\n")
       .map((line) => line.trim())
@@ -98,6 +114,25 @@ export default function SettingsPage({
     }
   };
 
+  const onUserThemesBlur = async () => {
+    if (!options || saving || !dirtyFields.userThemes) return;
+
+    const themeList = parseUserThemesText();
+
+    const nextOptions = {
+      ...options,
+      userThemes: themeList,
+    };
+
+    const saved = await saveOptions(nextOptions, {
+      syncUserReposText: false,
+      syncUserThemesText: true,
+    });
+    if (saved) {
+      setDirtyFields((prev) => ({ ...prev, userThemes: false }));
+    }
+  };
+
   const onToggleCloseDiscord = async () => {
     if (!options || saving) return;
 
@@ -120,7 +155,20 @@ export default function SettingsPage({
     };
 
     await saveOptions(nextOptions, { syncUserReposText: false });
-  }
+  };
+
+  const onToggleProvidedTheme = async (id: string) => {
+    if (!options || saving) return;
+
+    const nextOptions: UserOptions = {
+      ...options,
+      providedThemes: options.providedThemes.map((entry) => 
+        entry.id === id ? { ...entry, enabled: !entry.enabled } : entry
+      ),
+    };
+
+    await saveOptions(nextOptions, { syncUserReposText: false });
+  };
 
   return (
     <section>
@@ -202,6 +250,54 @@ export default function SettingsPage({
               <small>
                 Toggle which bundled repositories should be used. This list may change with app updates if a repositories is added, removed, or marked unstable
               </small>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3>Provided themes</h3>
+            <div className='form-field'>
+              <label>Included themes</label>
+              <ul className='settings-list'>
+                {options.providedThemes.map((theme) => (
+                  <li key={theme.id} className='settings-list-item'>
+                    <label className='settings-row'>
+                      <input
+                        type='checkbox'
+                        checked={theme.enabled}
+                        disabled={saving}
+                        onChange={() => onToggleProvidedTheme(theme.id)}
+                      />
+                      <div className='settings-meta'>
+                        <div className='settings-title'>{theme.name}</div>
+                        <div className='settings-url'>{theme.url}</div>
+                        <p className='settings-description'>{theme.description}</p>
+                      </div>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <small>Toggle which bundled themes should be downloaded after patching</small>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3>Custom themes</h3>
+            <div className='form-field'>
+              <label htmlFor='user-themes'>Custom user themes</label>
+              <textarea
+                id='user-themes'
+                className='text-area'
+                rows={5}
+                value={userThemesText}
+                onChange={(e) => {
+                  setUserThemesText(e.target.value);
+                  setDirtyFields((prev) => ({ ...prev, userThemes: true }));
+                  setMessage(null);
+                }}
+                onBlur={onUserThemesBlur}
+                placeholder='One theme URL per line'
+              />
+              <small>Each entry will be stored in the user options file and downloaded after patching</small>
             </div>
           </div>
           
