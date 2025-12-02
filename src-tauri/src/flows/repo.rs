@@ -1,4 +1,8 @@
-use std::{env, fs, path::{Path, PathBuf}, process::Command};
+use std::{
+  env, fs,
+  path::{Path, PathBuf},
+  process::Command,
+};
 
 #[cfg(windows)]
 fn command_candidates(command: &str) -> [String; 3] {

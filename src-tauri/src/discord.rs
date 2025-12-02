@@ -8,18 +8,15 @@ pub struct DiscordInstall {
   pub path: String,
 }
 
-fn add_candidates(
-  installs: &mut Vec<DiscordInstall>,
-  candidates: &[(&str, &str, PathBuf)],
-) {
+fn add_candidates(installs: &mut Vec<DiscordInstall>, candidates: &[(&str, &str, PathBuf)]) {
   for (id, name, path) in candidates {
-      if path.exists() && path.is_dir() {
-        installs.push(DiscordInstall {
-          id: (*id).to_string(),
-          name: (*name).to_string(),
-          path: path.to_string_lossy().into_owned(),
-        });
-      }
+    if path.exists() && path.is_dir() {
+      installs.push(DiscordInstall {
+        id: (*id).to_string(),
+        name: (*name).to_string(),
+        path: path.to_string_lossy().into_owned(),
+      });
+    }
   }
 }
 
@@ -73,7 +70,11 @@ fn detect_discord_installs() -> Vec<DiscordInstall> {
       let candidates = [
         ("stable", "Discord Stable", app_support.join("discord")),
         ("ptb", "Discord PTB", app_support.join("discordptb")),
-        ("canary", "Discord Canary", app_support.join("discordcanary")),
+        (
+          "canary",
+          "Discord Canary",
+          app_support.join("discordcanary"),
+        ),
       ];
 
       add_candidates(&mut installs, &candidates);

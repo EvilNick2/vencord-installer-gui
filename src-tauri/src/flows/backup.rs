@@ -76,7 +76,6 @@ fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<(), String> {
   Ok(())
 }
 
-
 fn is_cross_device_link(err: &io::Error) -> bool {
   match err.raw_os_error() {
     Some(18) => true,

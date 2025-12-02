@@ -279,7 +279,7 @@ pub fn close_discord_clients(close_enabled: bool) -> DiscordClientsState {
   let captured_processes = capture_discord_processes();
   let (captured_labels, _captured_deduped) = dedupe_processes(&captured_processes);
   let closed_processes: Vec<DiscordProcess> = close_processes(&captured_processes);
-  
+
   let closed_snapshot: Vec<DiscordProcess> =
     if closed_processes.is_empty() && !captured_processes.is_empty() {
       captured_processes.clone()
