@@ -106,7 +106,7 @@ fn is_cross_device_link(err: &io::Error) -> bool {
     _ => {
       #[cfg(not(target_os = "windows"))]
       {
-        return err.kind() == io::ErrorKind::CrossDeviceLink;
+        return err.kind() == io::ErrorKind::CrossesDevices;
       }
 
       #[cfg(target_os = "windows")]
