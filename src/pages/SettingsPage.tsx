@@ -241,7 +241,7 @@ export default function SettingsPage({
                       <div className='settings-meta'>
                         <div className='settings-title'>{repo.name}</div>
                         <div className='settings-url'>{repo.url}</div>
-                        <p className='settings-description'>{repo.description}</p>
+                        <p className='settings-list-description'>{repo.description}</p>
                       </div>
                     </label>
                   </li>
@@ -270,7 +270,7 @@ export default function SettingsPage({
                       <div className='settings-meta'>
                         <div className='settings-title'>{theme.name}</div>
                         <div className='settings-url'>{theme.url}</div>
-                        <p className='settings-description'>{theme.description}</p>
+                        <p className='settings-list-description'>{theme.description}</p>
                       </div>
                     </label>
                   </li>

@@ -665,6 +665,7 @@ small,
 
 .settings-list-description {
   display: block;
+  margin: 0;
 }
 
 .settings-url {
