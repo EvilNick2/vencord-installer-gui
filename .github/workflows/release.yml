@@ -181,20 +181,28 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Remove latest.json from release assets
+      - name: Remove latest.json and .sig files from release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${{ needs.build-and-release.outputs.release_tag || github.ref_name }}"
-          echo "Cleaning latest.json asset from release tag: $tag"
+          echo "Cleaning assets for release tag: $tag"
 
           release_json=$(gh api "repos/${{ github.repository }}/releases/tags/$tag")
-          asset_id=$(echo "$release_json" | jq '.assets[] | select(.name=="latest.json") | .id')
 
-          if [ -z "$asset_id" ]; then
-            echo "No latest.json asset found; nothing to delete."
+          asset_ids=$(echo "$release_json" | jq -r '.assets[] | select(.name == "latest.json" or .name | endswith(".sig")) | .id')
+
+          if [ -z "$asset_ids" ]; then
+            echo "No deletable assets found."
             exit 0
           fi
 
-          echo "Deleting asset id: $asset_id"
-          gh api "repos/${{ github.repository }}/releases/assets/$asset_id" -X DELETE
+          echo "Deleting assets:"
+          echo "$asset_ids"
+
+          for id in $asset_ids; do
+            gh api "repos/${{ github.repository }}/releases/assets/$id" -X DELETE
+            echo "Deleted asset ID: $id"
+          done
+
+          echo "Cleanup complete."
