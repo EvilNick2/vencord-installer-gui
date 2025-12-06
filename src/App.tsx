@@ -40,7 +40,7 @@ function App() {
       <aside className='sidebar'>
         <h1 className='app-title'>Vencord Installer</h1>
         <nav>
-          <button onClick={() => handleNavigate('home')}>Overview</button>
+          <button onClick={() => handleNavigate('home')}>Updates</button>
           <button onClick={() => handleNavigate('install')}>Install / Repair</button>
           <button onClick={() => handleNavigate('logs')}>Logs</button>
           {showDevTests && (

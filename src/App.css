@@ -5,7 +5,7 @@
   --app-bg: #f5f6fa;
   --sidebar-bg: #eef0f5;
   --surface: #ffffff;
-  --secondary-furface: #f1f2f6;
+  --secondary-surface: #f1f2f6;
   --text: #0b1021;
   --muted: #4b5563;
   --border: #d8dbe4;
@@ -23,7 +23,7 @@
     --app-bg: #0d1117;
     --sidebar-bg: #0f141e;
     --surface: #131a24;
-    --secondary-furface: #0f1622;
+    --secondary-surface: #0f1622;
     --text: #e5e7eb;
     --muted: #9ca3af;
     --border: #242c3a;
@@ -152,7 +152,7 @@ h2 {
   padding: 8px;
   height: 260px;
   overflow: auto;
-  background: var(--secondary-furface);
+  background: var(--secondary-surface);
   color: var(--text);
 }
 
@@ -199,7 +199,7 @@ h2 {
   padding: 8px 10px;
   border: 1px dashed var(--border);
   border-radius: 6px;
-  background: var(--secondary-furface);
+  background: var(--secondary-surface);
 }
 
 .log-card__next,
@@ -220,7 +220,7 @@ h2 {
   font-size: 12px;
   font-weight: 600;
   border: 1px solid var(--border);
-  background: var(--secondary-furface);
+  background: var(--secondary-surface);
 }
 
 .status-pending {
@@ -331,7 +331,7 @@ h2 {
   margin: 0;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--secondary-furface);
+  background: var(--secondary-surface);
   padding: 10px 12px;
 }
 
@@ -454,7 +454,7 @@ h2 {
 }
 
 .ghost:hover {
-  background: var(--secondary-furface);
+  background: var(--secondary-surface);
 }
 
 .install-grid {
@@ -690,4 +690,81 @@ small,
 
 .checkbox-title {
   font-weight: 600;
+}
+
+.updater-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.updater-header {
+  align-items: flex-start;
+}
+
+.updater-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.meta-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+
+.meta-value {
+  font-weight: 600;
+}
+
+.error-text {
+  color: #b91c1c;
+  margin-top: 4px;
+}
+
+.update-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--secondary-surface);
+}
+
+.update-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.update-notes__body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  white-space: pre-line;
+}
+
+.update-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--secondary-surface);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width 0.2s ease;
 }
