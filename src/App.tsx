@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import HomePage from "./pages/HomePage";
 import InstallPage from "./pages/InstallPage";
-import LogsPage from "./pages/LogsPage";
+// import LogsPage from "./pages/LogsPage";
 import DevTestsPage from "./pages/DevTestsPage";
 import SettingsPage from "./pages/SettingsPage";
 import './App.css'
@@ -42,7 +42,7 @@ function App() {
         <nav>
           <button onClick={() => handleNavigate('home')}>Updates</button>
           <button onClick={() => handleNavigate('install')}>Install / Repair</button>
-          <button onClick={() => handleNavigate('logs')}>Logs</button>
+          {/* <button onClick={() => handleNavigate('logs')}>Logs</button> */}
           {showDevTests && (
             <button onClick={() => handleNavigate('devTests')}>Development Tests</button>
           )}
@@ -53,7 +53,7 @@ function App() {
       <main className='content'>
         {page === 'home' && <HomePage />}
         {page === 'install' && <InstallPage />}
-        {page === 'logs' && <LogsPage />}
+        {/* {page === 'logs' && <LogsPage />} */}
         {showDevTests && page === 'devTests' && <DevTestsPage />}
         {page === 'settings' && (
           <SettingsPage onPendingChange={(pending) => updateSettingsPending(pending)} />
