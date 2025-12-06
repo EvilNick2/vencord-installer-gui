@@ -190,7 +190,14 @@ jobs:
 
           release_json=$(gh api "repos/${{ github.repository }}/releases/tags/$tag")
 
-          asset_ids=$(echo "$release_json" | jq -r '.assets[] | select(.name == "latest.json" or .name | endswith(".sig")) | .id')
+          asset_ids=$(echo "$release_json" | jq -r '
+            .assets[]
+            | select(
+                .name == "latest.json"
+                or ((.name // "") | endswith(".sig"))
+              )
+            | .id
+          ')
 
           if [ -z "$asset_ids" ]; then
             echo "No deletable assets found."
