@@ -146,7 +146,6 @@ jobs:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
           releaseBody: ""
-          generateReleaseNotes: true
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
@@ -168,7 +167,10 @@ jobs:
           mkdir -p updater
           tag="${{ needs.build-and-release.outputs.release_tag || github.ref_name }}"
           echo "Downloading latest.json from release tag: $tag"
-          gh release download "$tag" -p latest.json -D updater
+          gh release download "$tag" \
+            -R "${{ github.repository }}" \
+            -p latest.json \
+            -D updater
 
       - name: Upload updater manifest
         uses: actions/upload-pages-artifact@v3
