@@ -1,6 +1,6 @@
 [package]
 name = "vig"
-version = "1.0.0"
+version = "1.0.1"
 description = "A GUI application to install vencord with custom user plugins"
 authors = ["EvilNick2"]
 license = "MIT"
