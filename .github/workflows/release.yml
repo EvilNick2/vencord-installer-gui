@@ -104,7 +104,7 @@ jobs:
           workspaces: ./src-tauri
 
       - name: Create version tag
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && matrix.platform == 'ubuntu-latest'
         env:
           RELEASE_VERSION: ${{ needs.determine-version.outputs.release_version }}
         run: |
@@ -120,6 +120,7 @@ jobs:
 
       - name: Set release tag
         id: release_tag
+        shell: bash
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
             echo "value=v${{ needs.determine-version.outputs.release_version }}" >> "$GITHUB_OUTPUT"
@@ -131,7 +132,7 @@ jobs:
         if: runner.os == 'Linux'
         run: >-
           sudo apt-get update &&
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libwebkit2gtk-4.0-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev
           build-essential libssl-dev libgtk-3-dev libayatana-appindicator3-dev
           librsvg2-dev
 
@@ -165,7 +166,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p updater
-          gh release download "${{ needs.build-and-release.outputs.release_tag || github.ref_name }}" -p latest.json -D updater
+          tag="${{ needs.build-and-release.outputs.release_tag || github.ref_name }}"
+          echo "Downloading latest.json from release tag: $tag"
+          gh release download "$tag" -p latest.json -D updater
 
       - name: Upload updater manifest
         uses: actions/upload-pages-artifact@v3
@@ -175,3 +178,21 @@ jobs:
       - name: Deploy updater manifest to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Remove latest.json from release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ needs.build-and-release.outputs.release_tag || github.ref_name }}"
+          echo "Cleaning latest.json asset from release tag: $tag"
+
+          release_json=$(gh api "repos/${{ github.repository }}/releases/tags/$tag")
+          asset_id=$(echo "$release_json" | jq '.assets[] | select(.name=="latest.json") | .id')
+
+          if [ -z "$asset_id" ]; then
+            echo "No latest.json asset found; nothing to delete."
+            exit 0
+          fi
+
+          echo "Deleting asset id: $asset_id"
+          gh api "repos/${{ github.repository }}/releases/assets/$asset_id" -X DELETE
