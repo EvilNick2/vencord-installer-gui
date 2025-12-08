@@ -16,6 +16,7 @@
   --input-bg: #ffffff;
   --input-border: #cfd4df;
   --input-text: #0b1021;
+  --dock-safe-area: 80px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,7 +95,7 @@ body {
 
 .content {
   flex: 1;
-  padding: 16px 24px;
+  padding: 16px 24px var(--dock-safe-area);
   box-sizing: border-box;
   overflow: auto;
 }

@@ -4,7 +4,12 @@ import InstallPage from "./pages/InstallPage";
 // import LogsPage from "./pages/LogsPage";
 import DevTestsPage from "./pages/DevTestsPage";
 import SettingsPage from "./pages/SettingsPage";
+import Dock from "./components/Dock";
 import './App.css'
+
+import { House, FolderSync, ClipboardClock, FolderCode, Settings } from "lucide-react";
+
+void ClipboardClock; // temporary
 
 type Page = 'home' | 'install' | 'logs' | 'settings' | 'devTests';
 
@@ -35,20 +40,22 @@ function App() {
     setPage(nextPage);
   };
 
+  const dockItems = [
+    { icon: <House size={18} />, label: 'Home', onClick: () => handleNavigate('home') },
+    { icon: <FolderSync size={18} />, label: 'Install', onClick: () => handleNavigate('install') },
+    // { icon: <ClipboardClock size={18} />, label: 'Logs', onClick: () => handleNavigate('logs') },
+    ...(showDevTests ? [{ icon: <FolderCode size={18} />, label: 'Dev Tests', onClick: () => handleNavigate('devTests') }] : []),
+    { icon: <Settings size={18} />, label: 'Settings', onClick: () => handleNavigate('settings') }
+  ]
+
   return (
     <div className='app-root'>
-      <aside className='sidebar'>
-        <h1 className='app-title'>Vencord Installer</h1>
-        <nav>
-          <button onClick={() => handleNavigate('home')}>Updates</button>
-          <button onClick={() => handleNavigate('install')}>Install / Repair</button>
-          {/* <button onClick={() => handleNavigate('logs')}>Logs</button> */}
-          {showDevTests && (
-            <button onClick={() => handleNavigate('devTests')}>Development Tests</button>
-          )}
-          <button onClick={() => handleNavigate('settings')}>Settings</button>
-        </nav>
-      </aside>
+      <Dock
+        items={dockItems}
+        panelHeight={60}
+        baseItemSize={50}
+        magnification={55}
+      />
 
       <main className='content'>
         {page === 'home' && <HomePage />}
