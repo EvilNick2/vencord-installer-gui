@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
@@ -82,7 +82,7 @@ export default function UpdaterPanel() {
     };
   }, [progress, status]);
 
-  const checkForUpdates = async () => {
+  const checkForUpdates = useCallback(async () => {
     if (supportsUpdater !== true) return;
 
     setStatus("checking");
@@ -107,7 +107,7 @@ export default function UpdaterPanel() {
       setError(String(err));
       setStatusMessage("Could not check for updates");
     }
-  };
+  }, [supportsUpdater]);
 
   const downloadAndInstall = async () => {
     if (supportsUpdater !== true || !update) return;
@@ -155,10 +155,14 @@ export default function UpdaterPanel() {
   };
 
   useEffect(() => {
-    if (supportsUpdater) {
+    if (!supportsUpdater) return;
+
+    const timeout = setTimeout(() => {
       void checkForUpdates();
-    }
-  }, [supportsUpdater]);
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [supportsUpdater, checkForUpdates]);
 
   const disableCheck = status === "checking" || status === "downloading" || supportsUpdater !== true;
   const disableInstall =
