@@ -41,8 +41,9 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYwMzU3Nzc0Nzk3NkE2ODMKUldTRHBuWjVkSGMxWUFLOHN1T1cyTTNNdTlaS1ZDMVF4dVdESVFORUpDRW5pa0FHdGh6aGNIL3cK",
+      "dangerousInsecureTransportProtocol": true,
       "endpoints": [
-        "https://evilnick2.github.io/vencord-installer-gui/latest.json"
+        "http://localhost:8000/latest.json"
       ]
     }
   }

@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && dotenv vite build",
+    "build:vite": "tsc -b && dotenv vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "dotenv tauri"
+    "tauri": "dotenv tauri",
+    "start": "dotenv tauri dev",
+    "start:local": "dotenv tauri dev -- --config updater-test/tauri.local.conf.json",
+    "build": "dotenv tauri build",
+    "build:local": "dotenv tauri build -- --config updater-test/tauri.local.conf.json"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.0",

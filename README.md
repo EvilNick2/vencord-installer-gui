@@ -67,14 +67,14 @@ Before starting, you need:
     ```
 3.  **Run in development mode:**
     ```bash
-    npm run tauri dev
+    npm run start
     ```
     This will start the Vite frontend dev server and the Tauri backend.
 
 **Build:**
 
 ```bash
-npm run tauri build
+npm run build
 ```
 
 ## :memo: License ##
