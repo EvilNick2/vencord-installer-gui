@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
+mod dependencies;
 mod discord;
 mod flows;
 mod logging;
@@ -20,6 +21,8 @@ fn main() {
       })
       .invoke_handler(tauri::generate_handler![
         flows::backup::backup_vencord_install,
+        dependencies::install_dependency,
+        dependencies::list_dependencies,
         flows::discord_clients::list_discord_processes,
         flows::pipeline::run_patch_flow,
         flows::pipeline::run_dev_test,

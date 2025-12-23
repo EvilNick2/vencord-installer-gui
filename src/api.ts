@@ -58,6 +58,17 @@ export type FlowStepResult<T> = {
   detail?: T;
 };
 
+export type DependencyStatus = {
+  id: string;
+  name: string;
+  recommendedVersion: string;
+  installedVersion?: string;
+  status: 'installed' | 'missing' | 'outdated' | 'error';
+  message?: string;
+  canInstall: boolean;
+  installLabel?: string;
+};
+
 export type PatchFlowResult = {
   closeDiscord: FlowStepResult<string[]>;
   backup: FlowStepResult<BackupResult>;
@@ -121,4 +132,12 @@ export async function updateSelectedDiscordClients(
   selected: string[],
 ): Promise<void> {
   await invoke("update_selected_discord_clients", { selected });
+}
+
+export async function listDependencies(): Promise<DependencyStatus[]> {
+  return await invoke<DependencyStatus[]>("list_dependencies");
+}
+
+export async function installDependency(id: string): Promise<DependencyStatus> {
+  return await invoke<DependencyStatus>("install_dependency", { id });
 }

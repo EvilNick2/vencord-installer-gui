@@ -1,0 +1,98 @@
+[
+  {
+    "id": "node",
+    "name": "Node.js",
+    "command": "node",
+    "args": ["--version"],
+    "recommendedVersion": "20.18.1",
+    "installCommands": {
+      "windows": {
+        "command": "powershell",
+        "args": ["-Command", "winget install -e --id OpenJS.NodeJS.LTS"],
+        "displayLabel": "Install with winget"
+      },
+      "macos": {
+        "command": "brew",
+        "args": ["install", "node@20"],
+        "displayLabel":"Install with Homebrew"
+      },
+      "linux": {
+        "command": "bash",
+        "args": ["-c", "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"],
+        "displayLabel":"Install with NodeSource"
+      }
+    }
+  },
+  {
+    "id": "npm",
+    "name": "npm",
+    "command": "npm",
+    "args": ["--version"],
+    "recommendedVersion": "10.9.2",
+    "installCommands": {
+      "windows": {
+        "command": "npm",
+        "args": ["install", "-g", "npm@{version}"],
+        "displayLabel": "Upgrade npm globally"
+      },
+      "macos": {
+        "command": "npm",
+        "args": ["install", "-g", "npm@{version}"],
+        "displayLabel": "Upgrade npm globally"
+      },
+      "linux": {
+        "command": "npm",
+        "args": ["install", "-g", "npm@{version}"],
+        "displayLabel": "Upgrade npm globally"
+      }
+    }
+  },
+  {
+    "id": "pnpm",
+    "name": "pnpm",
+    "command": "pnpm",
+    "args": ["--version"],
+    "recommendedVersion": "9.15.0",
+    "installCommands": {
+      "windows": {
+        "command": "npm",
+        "args": ["install", "-g", "pnpm@{version}"],
+        "displayLabel": "Install pnpm globally"
+      },
+      "macos": {
+        "command": "npm",
+        "args": ["install", "-g", "pnpm@{version}"],
+        "displayLabel": "Install npm globally"
+      },
+      "linux": {
+        "command": "npm",
+        "args": ["install", "-g", "pnpm@{version}"],
+        "displayLabel": "Install npm globally"
+      }
+    }
+  },
+  {
+    "id": "git",
+    "name": "Git",
+    "command": "git",
+    "args": ["--version"],
+    "recommendedVersion": "2.47.1",
+    "installCommands": {
+      "windows": {
+        "command": "powershell",
+        "args": ["-Command", "winget install -e --id Git.Git"],
+        "displayLabel": "Install with winget"
+      },
+      "macos": {
+        "command": "brew",
+        "args": ["install", "git"],
+        "displayLabel": "Install with Homebrew"
+      },
+      "linux": {
+        "command": "bash",
+        "args": ["-c", "sudo apt-get update && sudo apt-get install -y git"],
+        "displayLabel": "Install with apt"
+      }
+    }
+  }
+]
