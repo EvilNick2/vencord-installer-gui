@@ -1,7 +1,7 @@
 {
   "name": "vencord-installer-gui",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,7 @@
     "start:local": "dotenv tauri dev -- --config updater-test/tauri.local.conf.json",
     "build": "dotenv tauri build",
     "build:local": "dotenv tauri build -- --config updater-test/tauri.local.conf.json",
-    "publish": "py scripts/version_bump.py" 
+    "publish": "py scripts/version_bump.py"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.0",
