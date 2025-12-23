@@ -145,7 +145,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "Temporarily remove Logs page as it's not yet implemented"
+          releaseBody: "Add dependency installer and fix app becoming non-responsive on vencord install"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
