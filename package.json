@@ -12,10 +12,12 @@
     "start": "dotenv tauri dev",
     "start:local": "dotenv tauri dev -- --config updater-test/tauri.local.conf.json",
     "build": "dotenv tauri build",
-    "build:local": "dotenv tauri build -- --config updater-test/tauri.local.conf.json"
+    "build:local": "dotenv tauri build -- --config updater-test/tauri.local.conf.json",
+    "publish": "py scripts/version_bump.py" 
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/plugin-dialog": "^2.3.1",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.9.0",
     "lucide-react": "^0.556.0",

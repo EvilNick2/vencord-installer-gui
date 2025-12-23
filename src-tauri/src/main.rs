@@ -14,6 +14,7 @@ fn main() {
 
   logging::with_tauri_logger(
     tauri::Builder::default()
+      .plugin(tauri_plugin_dialog::init())
       .plugin(tauri_plugin_updater::Builder::new().build())
       .setup(|_app| {
         logging::installer_logs_dir()?;

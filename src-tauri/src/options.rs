@@ -14,10 +14,9 @@ fn default_repo_base_dir() -> String {
   let home_dir = env::var(home_var).unwrap_or_else(|_| ".".to_string());
 
   PathBuf::from(home_dir)
-    .join("Documents")
-    .join("Vencord")
-    .to_string_lossy()
-    .into_owned()
+  .join("Vencord")
+  .to_string_lossy()
+  .into_owned()
 }
 
 fn default_selected_discord_clients() -> Vec<String> {
@@ -30,6 +29,7 @@ fn legacy_repo_base_dir() -> String {
 
   PathBuf::from(home_dir)
     .join("Documents")
+    .join("Vencord")
     .to_string_lossy()
     .into_owned()
 }

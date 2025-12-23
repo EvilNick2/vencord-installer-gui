@@ -132,15 +132,22 @@ body {
 
 .content {
   flex: 1;
-  padding: 16px 24px var(--dock-safe-area);
+  padding: 16px 24px;
   box-sizing: border-box;
   overflow-y: auto;
   display: flex;
   justify-content: center;
+  scroll-padding-bottom: var(--dock-safe-area);
 }
 
 .page {
   width: min(1100px, 100%);
+}
+
+.page::after {
+  content: "";
+  display: block;
+  height: var(--dock-safe-area);
 }
 
 .content {
@@ -656,6 +663,7 @@ h2 {
 .form-field {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 6px;
   margin-bottom: 12px;
 }
@@ -675,6 +683,67 @@ h2 {
   resize: vertical;
 }
 
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.input-row .text-input {
+  flex: 1;
+}
+
+.input-row--icon {
+  position: relative;
+}
+
+.input-row--icon .text-input {
+  padding-right: 42px;
+}
+
+.input-icon-button {
+  position: absolute;
+  right: 8px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 6px;
+  border: 1px solid var(--button-border);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.input-icon-button:hover:enabled {
+  background: var(--button-hover);
+}
+
+.input-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.input-button {
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 8px 12px;
+  border: 1px solid var(--button-border);
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.input-button:hover:enabled {
+  background: var(--button-hover);
+}
+
+.input-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 small,
 .settings-list-description {
   color: var(--muted);
@@ -683,6 +752,23 @@ small,
 .form-field small {
   display: block;
   line-height: 1.4;
+}
+
+.helper-text {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.helper-text p {
+  margin: 0 0 4px 0;
+}
+
+.helper-text p:last-child {
+  margin-bottom: 0;
 }
 
 .status-text {

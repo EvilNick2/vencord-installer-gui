@@ -1,6 +1,21 @@
+import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState } from "react";
+import { FolderOpen } from "lucide-react";
 import { getUserOptions, updateUserOptions } from "../api";
 import type { UserOptions } from "../api";
+
+const appendVencordFolder = (basePath: string) => {
+  const trimmed = basePath.replace(/[\\/]+$/, "");
+  const endsWithVencord = /(?:^|[\\/])Vencord$/i.test(trimmed);
+
+  if (endsWithVencord) return trimmed || "Vencord";
+
+  const separator = trimmed.includes("\\") && !trimmed.includes("/") ? "\\" : "/";
+
+  if (!trimmed) return `Vencord`;
+
+  return `${trimmed}${separator}Vencord`;
+};
 
 export default function SettingsPage({
   onPendingChange,
@@ -67,7 +82,6 @@ export default function SettingsPage({
         setUserThemesText(updated.userThemes.join("\n"));
       }
 
-      setMessage('Options saved');
       return true;
     } catch (err) {
       setError(String(err));
@@ -170,6 +184,28 @@ export default function SettingsPage({
     await saveOptions(nextOptions, { syncUserReposText: false });
   };
 
+  const onChooseRepoDir = async () => {
+    if (!options || saving) return;
+
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      defaultPath: options.vencordRepoDir,
+    });
+
+    if (!selected || Array.isArray(selected)) return;
+
+    const nextOptions = { ...options, vencordRepoDir: appendVencordFolder(selected) };
+    setOptions(nextOptions);
+    setDirtyFields((prev) => ({ ...prev, repoDir: true }));
+    setMessage(null);
+
+    const saved = await saveOptions(nextOptions, { syncUserReposText: false });
+    if (saved) {
+      setDirtyFields((prev) => ({ ...prev, repoDir: false }))
+    }
+  }
+
   return (
     <section>
       <h2>Settings</h2>
@@ -198,28 +234,39 @@ export default function SettingsPage({
 
             <div className="form-field">
               <label htmlFor="vencord-repo-dir">Clone destination</label>
-              <input
-                id="vencord-repo-dir"
-                className="text-input"
-                value={options.vencordRepoDir}
-                onChange={(e) => {
-                  setOptions({ ...options, vencordRepoDir: e.target.value });
-                  setDirtyFields((prev) => ({ ...prev, repoDir: true }));
-                  setMessage(null);
-                }}
-                onBlur={async () => {
-                  if (!options || saving || !dirtyFields.repoDir) return;
+              <div className="input-row input-row--icon">
+                <input
+                  id="vencord-repo-dir"
+                  className="text-input"
+                  value={options.vencordRepoDir}
+                  onChange={(e) => {
+                    setOptions({ ...options, vencordRepoDir: e.target.value });
+                    setDirtyFields((prev) => ({ ...prev, repoDir: true }));
+                    setMessage(null);
+                  }}
+                  onBlur={async () => {
+                    if (!options || saving || !dirtyFields.repoDir) return;
 
-                  const saved = await saveOptions(options, { syncUserReposText: false });
-                  if (saved) {
-                    setDirtyFields((prev) => ({ ...prev, repoDir: false }));
-                  }
-                }}
-                placeholder="e.g., C:/Users/user/Documents/Vencord"
-              />
-              <small>
-                The installer will clone or update the Vencord source directly at this path, using the folder name you provide
-                Defaults to your Documents/Vencord folder
+                    const saved = await saveOptions(options, { syncUserReposText: false });
+                    if (saved) {
+                      setDirtyFields((prev) => ({ ...prev, repoDir: false }));
+                    }
+                  }}
+                  placeholder="e.g., C:/Users/user/Documents/Vencord"
+                />
+                <button
+                  type="button"
+                  onClick={onChooseRepoDir}
+                  disabled={saving}
+                  className="input-icon-button"
+                  aria-label="Choose folder"
+                >
+                  <FolderOpen size={18} />
+                </button>
+              </div>
+              <small className="helper-text" aria-live="polite">
+                <p>The installer will clone or update the Vencord source directly at this path, using the folder name you provide</p>
+                <p>Defaults to your home directory</p>
               </small>
             </div>
           </div>
