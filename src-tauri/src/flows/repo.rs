@@ -18,6 +18,22 @@ fn command_candidates(command: &str) -> [String; 1] {
   [command.to_string()]
 }
 
+#[cfg(windows)]
+fn build_command(command: &str) -> Command {
+  use std::os::windows::process::CommandExt;
+
+  const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+  let mut cmd = Command::new(command);
+  cmd.creation_flags(CREATE_NO_WINDOW);
+  cmd
+}
+
+#[cfg(not(windows))]
+fn build_command(command: &str) -> Command {
+  Command::new(command)
+}
+
 fn run_command(
   command: &str,
   args: &[&str],
@@ -27,7 +43,7 @@ fn run_command(
   let mut last_error: Option<String> = None;
 
   for candidate in command_candidates(command) {
-    let mut cmd = Command::new(&candidate);
+    let mut cmd = build_command(&candidate);
 
     if let Some(dir) = working_dir {
       cmd.current_dir(dir);
@@ -120,7 +136,7 @@ fn sync_user_plugin_repos(plugin_urls: &[String], repo_dir: &Path) -> Result<(),
 }
 
 fn run_git(args: &[&str]) -> Result<(), String> {
-  let output = Command::new("git")
+  let output = build_command("git")
     .args(args)
     .output()
     .map_err(|err| format!("Failed to run git: {err}"))?;
@@ -137,7 +153,7 @@ fn run_git(args: &[&str]) -> Result<(), String> {
 }
 
 fn is_git_repo(repo_path_str: &str) -> Result<bool, String> {
-  let output = Command::new("git")
+  let output = build_command("git")
     .args(["-C", repo_path_str, "rev-parse", "--is-inside-work-tree"])
     .output()
     .map_err(|err| format!("Failed to run git: {err}"))?;

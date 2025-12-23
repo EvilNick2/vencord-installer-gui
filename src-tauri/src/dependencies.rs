@@ -72,6 +72,22 @@ fn command_candidates(command: &str) -> [String; 1] {
   [command.to_string()]
 }
 
+#[cfg(windows)]
+fn build_command(command: &str) -> Command {
+  use std::os::windows::process::CommandExt;
+
+  const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+  let mut cmd = Command::new(command);
+  cmd.creation_flags(CREATE_NO_WINDOW);
+  cmd
+}
+
+#[cfg(not(windows))]
+fn build_command(command: &str) -> Command {
+  Command::new(command)
+}
+
 fn current_platform_key() -> &'static str {
   if cfg!(target_os = "windows") {
     "windows"
@@ -145,7 +161,7 @@ fn run_command(command: &str, args: &[String]) -> Result<String, String> {
   let mut last_error: Option<String> = None;
 
   for candidate in command_candidates(command) {
-    match Command::new(&candidate).args(args).output() {
+    match build_command(&candidate).args(args).output() {
       Ok(output) => {
         if output.status.success() {
           return Ok(String::from_utf8_lossy(&output.stdout).to_string());
@@ -178,7 +194,7 @@ fn detect_installed_version(spec: &DependencySpec) -> Result<Option<String>, Str
   let mut last_error: Option<String> = None;
 
   for candidate in command_candidates(&spec.command) {
-    match Command::new(&candidate).args(&args).output() {
+    match build_command(&candidate).args(&args).output() {
       Ok(output) => {
         if !output.status.success() {
           let stderr = String::from_utf8_lossy(&output.stderr);
@@ -281,7 +297,7 @@ pub fn list_dependencies() -> Result<Vec<DependencyStatus>, String> {
 #[tauri::command]
 pub async fn install_dependency(
   app: tauri::AppHandle,
-  id: String
+  id: String,
 ) -> Result<DependencyStatus, String> {
   let spec = DEPENDENCIES
     .iter()
