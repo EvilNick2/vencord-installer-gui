@@ -57,14 +57,16 @@ function App() {
         magnification={55}
       />
 
-      <main className='content'>
-        {page === 'home' && <HomePage />}
-        {page === 'install' && <InstallPage />}
-        {/* {page === 'logs' && <LogsPage />} */}
-        {showDevTests && page === 'devTests' && <DevTestsPage />}
-        {page === 'settings' && (
-          <SettingsPage onPendingChange={(pending) => updateSettingsPending(pending)} />
-        )}
+      <main className="content">
+        <div className="page">
+          {page === 'home' && <HomePage />}
+          {page === 'install' && <InstallPage />}
+          {/* {page === 'logs' && <LogsPage />} */}
+          {showDevTests && page === 'devTests' && <DevTestsPage />}
+          {page === 'settings' && (
+            <SettingsPage onPendingChange={(pending) => updateSettingsPending(pending)} />
+          )}
+        </div>
       </main>
     </div>
   );
