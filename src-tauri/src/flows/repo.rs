@@ -102,6 +102,21 @@ fn repo_folder_name_from_url(url: &str) -> String {
   last.trim_end_matches(".git").to_string()
 }
 
+fn clean_node_modules(repo_dir: &Path) -> Result<(), String> {
+  let node_modules = repo_dir.join("node_modules");
+
+  if node_modules.exists() {
+    fs::remove_dir_all(&node_modules).map_err(|err| {
+      format!(
+        "Failed to remove existing node_modules at {}: {err}",
+        node_modules.display()
+      )
+    })?;
+  }
+
+  Ok(())
+}
+
 fn sync_user_plugin_repos(plugin_urls: &[String], repo_dir: &Path) -> Result<(), String> {
   if plugin_urls.is_empty() {
     return Ok(());
@@ -226,6 +241,10 @@ pub fn sync_vencord_repo(
 pub fn build_vencord_repo(repo_dir: &str) -> Result<String, String> {
   check_tool("node", &["--version"], "Node.js")?;
   check_tool("npm", &["--version"], "npm")?;
+
+  let repo_path = Path::new(repo_dir);
+
+  clean_node_modules(repo_path)?;
 
   run_command(
     "npm",
