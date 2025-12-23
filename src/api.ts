@@ -143,5 +143,6 @@ export async function listDependencies(): Promise<DependencyStatus[]> {
 }
 
 export async function installDependency(id: string): Promise<DependencyStatus> {
-  return await invoke<DependencyStatus>("install_dependency", { id });
+  const result = await invoke<DependencyStatus>("install_dependency", { id });
+  return result;
 }

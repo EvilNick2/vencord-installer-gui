@@ -9,10 +9,10 @@ const STATUS_LABELS: Record<DependencyStatus['status'], string> = {
 };
 
 const STATUS_CLASS: Record<DependencyStatus['status'], string> = {
-  installed: 'badge success',
-  missing: 'badge warning',
-  outdated: 'badge info',
-  error: 'badge danger',
+  installed: 'status-pill status-ready',
+  missing: 'status-pill status-pending',
+  outdated: 'status-pill status-info',
+  error: 'status-pill status-error',
 };
 
 type InstallState = Record<string, boolean>;
@@ -60,6 +60,7 @@ export default function DependencyPanel() {
     try {
       const updated = await installDependency(id);
       setDependencies((prev) => ({ ...prev, [updated.id]: updated }));
+      await refresh();
     } catch (err) {
       setError(String(err));
     } finally {

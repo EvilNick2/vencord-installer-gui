@@ -1,9 +1,11 @@
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use tauri::Emitter;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::ErrorKind;
 use std::process::Command;
+use tauri::async_runtime::spawn_blocking;
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,6 +43,14 @@ pub struct DependencyStatus {
   pub can_install: bool,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub install_label: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DependencyInstallEvent {
+  id: String,
+  status: String,
+  message: Option<String>,
 }
 
 static DEPENDENCIES: Lazy<Vec<DependencySpec>> = Lazy::new(|| {
@@ -269,17 +279,64 @@ pub fn list_dependencies() -> Result<Vec<DependencyStatus>, String> {
 }
 
 #[tauri::command]
-pub fn install_dependency(id: String) -> Result<DependencyStatus, String> {
+pub async fn install_dependency(
+  app: tauri::AppHandle,
+  id: String
+) -> Result<DependencyStatus, String> {
   let spec = DEPENDENCIES
     .iter()
     .find(|entry| entry.id == id)
+    .cloned()
     .ok_or_else(|| format!("Unknown dependency {id}"))?;
 
-  let install = resolve_install_command(spec)
+  let install = resolve_install_command(&spec)
     .ok_or_else(|| format!("No automated install configured for {}", spec.name))?;
 
   let args = render_install_args(&install.args, &spec.recommended_version);
-  run_command(&install.command, &args)?;
+  let command = install.command.clone();
 
-  Ok(build_status(spec))
+  app
+    .emit(
+      "dependency-install",
+      DependencyInstallEvent {
+        id: spec.id.clone(),
+        status: "started".to_string(),
+        message: None,
+      },
+    )
+    .ok();
+
+  let run_result = spawn_blocking(move || run_command(&command, &args))
+    .await
+    .map_err(|err| err.to_string())?;
+
+  if let Err(err) = run_result {
+    app
+      .emit(
+        "dependency-install",
+        DependencyInstallEvent {
+          id: spec.id.clone(),
+          status: "error".to_string(),
+          message: Some(err.clone()),
+        },
+      )
+      .ok();
+
+    return Err(err);
+  }
+
+  let status = build_status(&spec);
+
+  app
+    .emit(
+      "dependency-install",
+      DependencyInstallEvent {
+        id: spec.id,
+        status: "completed".to_string(),
+        message: None,
+      },
+    )
+    .ok();
+
+  Ok(status)
 }
