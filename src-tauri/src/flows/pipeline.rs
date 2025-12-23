@@ -1,9 +1,22 @@
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::PathBuf;
 
 use crate::{discord, options};
+use tauri::Emitter;
 
 use super::{backup, discord_clients, repo, themes};
+
+#[derive(Serialize, Clone, Copy)]
+#[serde[rename_all = "camelCase"]]
+enum PatchFlowStep {
+  CloseDiscord,
+  Backup,
+  SyncRepo,
+  Build,
+  Inject,
+  DownloadThemes,
+  ReopenDiscord,
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,9 +31,10 @@ pub enum DevTestStep {
 }
 
 #[allow(dead_code)]
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 pub enum StepStatus {
+  Running,
   Completed,
   Skipped,
   Pending,
@@ -34,12 +48,29 @@ pub struct StepResult<T> {
   pub detail: Option<T>,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct StepEventPayload {
+  step: PatchFlowStep,
+  status: StepStatus,
+  message: Option<String>,
+  detail: Option<serde_json::Value>,
+}
+
 impl<T> StepResult<T> {
   pub fn completed(detail: T) -> Self {
     Self {
       status: StepStatus::Completed,
       message: None,
       detail: Some(detail),
+    }
+  }
+
+  pub fn running(message: impl Into<String>) -> Self {
+    Self {
+      status: StepStatus::Running,
+      message: Some(message.into()),
+      detail: None,
     }
   }
 
@@ -59,6 +90,36 @@ impl<T> StepResult<T> {
       detail: None,
     }
   }
+}
+
+async fn run_blocking<T, F>(task: F) -> Result<T, String>
+where
+  T: Send + 'static,
+  F: FnOnce() -> Result<T, String> + Send + 'static,
+{
+  tauri::async_runtime::spawn_blocking(task)
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+fn emit_step_event<T: Serialize>(
+  app: &tauri::AppHandle,
+  step: PatchFlowStep,
+  result: &StepResult<T>,
+) {
+  let detail = result
+    .detail
+    .as_ref()
+    .and_then(|value| serde_json::to_value(value).ok());
+
+  let payload = StepEventPayload {
+    step,
+    status: result.status,
+    message: result.message.clone(),
+    detail,
+  };
+
+  let _ = app.emit("patch-flow-step", payload);
 }
 
 fn resolve_selected_discord_locations(selected_ids: &[String]) -> Result<Vec<String>, String> {
@@ -131,22 +192,43 @@ pub enum DevTestResult {
 }
 
 #[tauri::command]
-pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
-  let options = options::read_user_options()?;
+pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, String> {
+  let options = run_blocking(options::read_user_options).await?;
   let plugin_urls = options::resolve_plugin_repositories(&options);
   let themes = options::resolve_themes(&options);
 
-  let discord_state = discord_clients::close_discord_clients(options.close_discord_on_backup);
+  emit_step_event(
+    &app,
+    PatchFlowStep::CloseDiscord,
+    &StepResult::<()>::running("Closing Discord clients"),
+  );
+
+  let discord_state = run_blocking({
+    let close_enabled = options.close_discord_on_backup;
+    move || Ok(discord_clients::close_discord_clients(close_enabled))
+  })
+  .await?;
 
   let close_step = if discord_state.closing_skipped {
     StepResult::skipped("Closing Discord is disabled in settings")
   } else {
     StepResult::completed(discord_state.closed_clients.clone())
   };
+  emit_step_event(&app, PatchFlowStep::CloseDiscord, &close_step);
 
-  let vencord_install = Path::new(&options.vencord_repo_dir);
+  let vencord_install = PathBuf::from(&options.vencord_repo_dir);
 
-  let backup_path = backup::move_vencord_install(&vencord_install)?;
+  emit_step_event(
+    &app,
+    PatchFlowStep::Backup,
+    &StepResult::<()>::running("Backing up Vencord installation"),
+  );
+
+  let backup_path = run_blocking({
+    let vencord_install = vencord_install.clone();
+    move || backup::move_vencord_install(&vencord_install)
+  })
+  .await?;
 
   let backup_result = backup::BackupResult {
     source_path: vencord_install.to_string_lossy().into_owned(),
@@ -157,16 +239,30 @@ pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
   };
 
   let backup_step = StepResult::completed(backup_result);
+  emit_step_event(&app, PatchFlowStep::Backup, &backup_step);
 
-  let sync_path = match repo::sync_vencord_repo(
-    &options.vencord_repo_url,
-    &options.vencord_repo_dir,
-    &plugin_urls,
-  ) {
+  emit_step_event(
+    &app,
+    PatchFlowStep::SyncRepo,
+    &StepResult::<()>::running("Syncing Vencord repository"),
+  );
+
+  let sync_path = match run_blocking({
+    let repo_url = options.vencord_repo_url.clone();
+    let repo_dir = options.vencord_repo_dir.clone();
+    let plugin_urls = plugin_urls.clone();
+    move || repo::sync_vencord_repo(&repo_url, &repo_dir, &plugin_urls)
+  })
+  .await
+  {
     Ok(path) => path,
     Err(err) => {
       if !discord_state.closing_skipped {
-        let _ = discord_clients::restart_processes(&discord_state.processes);
+        let _ = run_blocking({
+          let processes = discord_state.processes.clone();
+          move || Ok(discord_clients::restart_processes(&processes))
+        })
+        .await;
       }
 
       return Err(err);
@@ -174,22 +270,55 @@ pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
   };
 
   let sync_step = StepResult::completed(sync_path.clone());
-  let build_step = match repo::build_vencord_repo(&sync_path) {
+  emit_step_event(&app, PatchFlowStep::SyncRepo, &sync_step);
+
+  emit_step_event(
+    &app,
+    PatchFlowStep::Build,
+    &StepResult::<()>::running("Building Vencord artifacts"),
+  );
+
+  let build_step = match run_blocking({
+    let sync_path = sync_path.clone();
+    move || repo::build_vencord_repo(&sync_path)
+  })
+  .await
+  {
     Ok(message) => StepResult::completed(message),
     Err(err) => {
       if !discord_state.closing_skipped {
-        let _ = discord_clients::restart_processes(&discord_state.processes);
+        let _ = run_blocking({
+          let processes = discord_state.processes.clone();
+          move || Ok(discord_clients::restart_processes(&processes))
+        })
+        .await;
       }
 
       return Err(err);
     }
   };
-  let inject_locations = match resolve_selected_discord_locations(&options.selected_discord_clients)
+  emit_step_event(&app, PatchFlowStep::Build, &build_step);
+
+  emit_step_event(
+    &app,
+    PatchFlowStep::Inject,
+    &StepResult::<()>::running("Injecting patched files"),
+  );
+
+  let inject_locations = match run_blocking({
+    let selected = options.selected_discord_clients.clone();
+    move || resolve_selected_discord_locations(&selected)
+  })
+  .await
   {
     Ok(locations) => locations,
     Err(err) => {
       if !discord_state.closing_skipped {
-        let _ = discord_clients::restart_processes(&discord_state.processes);
+        let _ = run_blocking({
+          let processes = discord_state.processes.clone();
+          move || Ok(discord_clients::restart_processes(&processes))
+        })
+        .await;
       }
 
       return Err(err);
@@ -199,39 +328,78 @@ pub fn run_patch_flow() -> Result<PatchFlowResult, String> {
   let inject_step = if inject_locations.is_empty() {
     StepResult::skipped("No Discord clients selected for injection")
   } else {
-    match repo::inject_vencord_repo(&sync_path, &inject_locations) {
+    match run_blocking({
+      let sync_path = sync_path.clone();
+      move || repo::inject_vencord_repo(&sync_path, &inject_locations)
+    })
+    .await
+    {
       Ok(message) => StepResult::completed(message),
       Err(err) => {
         if !discord_state.closing_skipped {
-          let _ = discord_clients::restart_processes(&discord_state.processes);
+          let _ = run_blocking({
+            let processes = discord_state.processes.clone();
+            move || Ok(discord_clients::restart_processes(&processes))
+          })
+          .await;
         }
 
         return Err(err);
       }
     }
   };
+  emit_step_event(&app, PatchFlowStep::Inject, &inject_step);
+
+  emit_step_event(
+    &app,
+    PatchFlowStep::DownloadThemes,
+    &StepResult::<()>::running("Downloading themes"),
+  );
 
   let themes_step = if themes.is_empty() {
     StepResult::skipped("No themes enabled; skipping download")
   } else {
-    match themes::download_themes(&themes) {
+    match run_blocking({
+      let themes = themes.clone();
+      move || themes::download_themes(&themes)
+    })
+    .await
+    {
       Ok(message) => StepResult::completed(message),
       Err(err) => {
         if !discord_state.closing_skipped {
-          let _ = discord_clients::restart_processes(&discord_state.processes);
+          let _ = run_blocking({
+            let processes = discord_state.processes.clone();
+            move || Ok(discord_clients::restart_processes(&processes))
+          })
+          .await;
         }
 
         return Err(err);
       }
     }
   };
+  emit_step_event(&app, PatchFlowStep::DownloadThemes, &themes_step);
+
+  emit_step_event(
+    &app,
+    PatchFlowStep::ReopenDiscord,
+    &StepResult::<()>::running("Restarting Discord clients"),
+  );
 
   let reopen_step = if discord_state.closing_skipped {
     StepResult::skipped("Discord was not closed; no restart needed")
   } else {
-    let restarted = discord_clients::restart_processes(&discord_state.processes);
+    let restarted = run_blocking({
+      let processes = discord_state.processes.clone();
+      move || Ok(discord_clients::restart_processes(&processes))
+    })
+    .await
+    .unwrap_or_default();
+
     StepResult::completed(restarted)
   };
+  emit_step_event(&app, PatchFlowStep::ReopenDiscord, &reopen_step);
 
   Ok(PatchFlowResult {
     close_discord: close_step,

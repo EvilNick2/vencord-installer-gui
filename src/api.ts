@@ -50,13 +50,17 @@ export type DiscordProcess = {
   cmd: string[];
 };
 
-export type FlowStepStatus = "completed" | "skipped" | "pending";
+export type FlowStepStatus = "running" | "completed" | "skipped" | "pending";
 
-export type FlowStepResult<T> = {
+export type FlowStepResult<T = unknown> = {
   status: FlowStepStatus;
   message?: string;
   detail?: T;
 };
+
+export type PatchFlowStepEvent<T = unknown> = FlowStepResult<T> & {
+  step: keyof PatchFlowResult;
+}
 
 export type DependencyStatus = {
   id: string;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   getDiscordInstalls,
   getUserOptions,
@@ -11,6 +12,7 @@ import type {
   DiscordProcess,
   FlowStepResult,
   FlowStepStatus,
+  PatchFlowStepEvent,
   PatchFlowResult,
   UserOptions,
 } from "../api";
@@ -55,7 +57,7 @@ const FLOW_STEPS: { id: keyof PatchFlowResult; title: string; description: strin
   },
 ];
 
-type StepVisualStatus = FlowStepStatus | "running" | "idle";
+type StepVisualStatus = FlowStepStatus | "idle";
 
 type StepState = {
   status: StepVisualStatus;
@@ -244,7 +246,7 @@ export default function InstallPage() {
     refreshOpenClients();
   }, []);
 
-    const persistSelectedClients = (nextSelected: string[]) => {
+  const persistSelectedClients = (nextSelected: string[]) => {
     if (!userOptions) return;
 
     const nextOptions = { ...userOptions, selectedDiscordClients: nextSelected };
@@ -280,7 +282,27 @@ export default function InstallPage() {
         "selected clients"
     );
 
+    let unlisten: UnlistenFn | null = null;
+
     try {
+      unlisten = await listen<PatchFlowStepEvent>("patch-flow-step", (event) => {
+        const payload = event.payload;
+
+        if (!payload) return;
+
+        setStepStates((prev) => {
+          const updated = { ...prev } as StepStateMap;
+          const { step, ...result } = payload;
+
+          updated[step] = {
+            status: result.status,
+            message: result.message || describeStep(step, result),
+          };
+          
+          return updated;
+        })
+      })
+
       const result = await runPatchFlow();
       setLastResult(result);
       setStepStates(mapFlowToSteps(result));
@@ -288,6 +310,10 @@ export default function InstallPage() {
       setFlowError(String(err));
       setStepStates(buildInitialSteps());
     } finally {
+      if (unlisten) {
+        await unlisten();
+      }
+
       setIsRunning(false);
       setActiveInstallId(null);
     }
