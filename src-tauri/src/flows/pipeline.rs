@@ -224,21 +224,28 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
     &StepResult::<()>::running("Backing up Vencord installation"),
   );
 
-  let backup_path = run_blocking({
-    let vencord_install = vencord_install.clone();
-    move || backup::move_vencord_install(&vencord_install)
-  })
-  .await?;
+  let backup_step = if vencord_install.exists() {
+    let backup_path = run_blocking({
+      let vencord_install = vencord_install.clone();
+      move || backup::move_vencord_install(&vencord_install)
+    })
+    .await?;
 
-  let backup_result = backup::BackupResult {
-    source_path: vencord_install.to_string_lossy().into_owned(),
-    backup_path: backup_path.to_string_lossy().into_owned(),
-    closed_clients: discord_state.closed_clients.clone(),
-    restarted_clients: Vec::new(),
-    closing_skipped: discord_state.closing_skipped,
+    let backup_result = backup::BackupResult {
+      source_path: vencord_install.to_string_lossy().into_owned(),
+      backup_path: backup_path.to_string_lossy().into_owned(),
+      closed_clients: discord_state.closed_clients.clone(),
+      restarted_clients: Vec::new(),
+      closing_skipped: discord_state.closing_skipped,
+    };
+
+    StepResult::completed(backup_result)
+  } else {
+    StepResult::skipped(format!(
+      "No Vencord installation found at {}; skipping backup",
+      vencord_install.display()
+    ))
   };
-
-  let backup_step = StepResult::completed(backup_result);
   emit_step_event(&app, PatchFlowStep::Backup, &backup_step);
 
   emit_step_event(
