@@ -50,7 +50,7 @@ Before starting, you need:
 - [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/en)
 - [Rust Language Toolchain](https://www.rust-lang.org/tools/install)
-- Tauri Prerequisites (See the [Tauri Guide](https://tauri.app/v1/guides/getting-started/prerequisites))
+- Tauri Prerequisites (See the [Tauri Guide](https://tauri.app/start/prerequisites/))
 
 ## :checkered_flag: Starting ##
 
