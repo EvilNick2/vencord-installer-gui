@@ -4,7 +4,7 @@
     "name": "Node.js",
     "command": "node",
     "args": ["--version"],
-    "recommendedVersion": "20.18.1",
+    "recommendedVersion": "24.12.0",
     "installCommands": {
       "windows": {
         "command": "powershell",
@@ -28,7 +28,7 @@
     "name": "npm",
     "command": "npm",
     "args": ["--version"],
-    "recommendedVersion": "10.9.2",
+    "recommendedVersion": "11.6.2",
     "installCommands": {
       "windows": {
         "command": "npm",
@@ -52,7 +52,7 @@
     "name": "pnpm",
     "command": "pnpm",
     "args": ["--version"],
-    "recommendedVersion": "9.15.0",
+    "recommendedVersion": "10.26.2",
     "installCommands": {
       "windows": {
         "command": "npm",
@@ -76,7 +76,7 @@
     "name": "Git",
     "command": "git",
     "args": ["--version"],
-    "recommendedVersion": "2.47.1",
+    "recommendedVersion": "2.52.0",
     "installCommands": {
       "windows": {
         "command": "powershell",
