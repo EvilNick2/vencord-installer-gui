@@ -33,6 +33,8 @@ export type UserOptions = {
   providedThemes: ProvidedTheme[];
   closeDiscordOnBackup: boolean;
   selectedDiscordClients: string[];
+  maxBackupCount?: number | null;
+  maxBackupSizeMb?: number | null;
 };
 
 export type BackupResult = {
@@ -42,6 +44,13 @@ export type BackupResult = {
   restartedClients: string[];
   closingSkipped: boolean;
 };
+
+export type BackupInfo = {
+  name: string;
+  path: string;
+  sizeBytes: number;
+  createdAt?: string;
+}
 
 export type DiscordProcess = {
   pid: string;
@@ -111,6 +120,14 @@ export async function getUserOptions(): Promise<UserOptions> {
 
 export async function updateUserOptions(options: UserOptions): Promise<UserOptions> {
   return await invoke<UserOptions>("update_user_options", { options });
+}
+
+export async function listBackups(): Promise<BackupInfo[]> {
+  return await invoke<BackupInfo[]>("list_backups");
+}
+
+export async function deleteBackups(names: string[]): Promise<void> {
+  await invoke("delete_backups", { names });
 }
 
 export async function backupVencordInstall(sourcePath: string): Promise<BackupResult> {

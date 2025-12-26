@@ -1,6 +1,11 @@
-use chrono::Local;
+use chrono::{DateTime,  Local};
 use serde::Serialize;
-use std::{fs, io, path::Path, path::PathBuf};
+use std::{
+  cmp::Ordering,
+  fs, io,
+  path::{Path, PathBuf},
+  time::SystemTime,
+};
 
 use crate::{config::app_config_dir, options};
 
@@ -16,15 +21,39 @@ pub struct BackupResult {
   pub closing_skipped: bool,
 }
 
-fn backup_destination() -> Result<PathBuf, String> {
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupInfo {
+  pub name: String,
+  pub path: String,
+  pub size_bytes: u64,
+  pub created_at: Option<String>,
+}
+
+#[derive(Clone)]
+struct BackupEntry {
+  name: String,
+  path: PathBuf,
+  modified: SystemTime,
+  size_bytes: u64,
+}
+
+fn backups_root() -> Result<PathBuf, String> {
   let dir = app_config_dir().map_err(|err| format!("Failed to get config directory: {err}"))?;
   let backups = dir.join("backups");
+
   fs::create_dir_all(&backups).map_err(|err| {
     format!(
       "Failed to create backup directory {}: {err}",
       backups.display()
     )
   })?;
+
+  Ok(backups)
+}
+
+fn backup_destination() -> Result<PathBuf, String> {
+  let backups = backups_root()?;
 
   let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
 
@@ -92,6 +121,118 @@ fn is_cross_device_link(err: &io::Error) -> bool {
       }
     }
   }
+}
+
+fn dir_size(path: &Path) -> Result<u64, String> {
+  let mut total: u64 = 0;
+  let mut stack = vec![path.to_path_buf()];
+
+  while let Some(dir) = stack.pop() {
+    let entries = fs::read_dir(&dir)
+      .map_err(|err| format!("Failed to read directory {}: {err}", dir.display()))?;
+
+    for entry in entries {
+      let entry =
+        entry.map_err(|err| format!("Failed to read entry in {}: {err}", dir.display()))?;
+      let path = entry.path();
+      let metadata = entry
+        .metadata()
+        .map_err(|err| format!("failed to read metadata for {}: {err}", path.display()))?;
+
+      if metadata.is_dir() {
+        stack.push(path);
+      } else {
+        total = total.saturating_add(metadata.len());
+      }
+    }
+  }
+
+  Ok(total)
+}
+
+fn collect_backups() -> Result<Vec<BackupEntry>, String> {
+  let backups_dir = backups_root()?;
+  let mut backups = Vec::new();
+
+  for entry in
+    fs::read_dir(&backups_dir).map_err(|err| format!("Failed to read backups directory: {err}"))?
+  {
+    let entry = entry.map_err(|err| format!("Failed to read backup entry: {err}"))?;
+    let path = entry.path();
+
+    if !path.is_dir() {
+      continue;
+    }
+
+    let name = match path.file_name().and_then(|name| name.to_str()) {
+      Some(value) => value.to_string(),
+      None => continue,
+    };
+
+    let metadata = fs::metadata(&path)
+      .map_err(|err| format!("Failed to read metadata for {}: {err}", path.display()))?;
+    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+    let size_bytes = dir_size(&path)?;
+
+    backups.push(BackupEntry {
+      name,
+      path,
+      modified,
+      size_bytes,
+    });
+  }
+
+  backups.sort_by(|a, b| match a.modified.cmp(&b.modified) {
+    Ordering::Less => Ordering::Greater,
+    Ordering::Greater => Ordering::Less,
+    Ordering::Equal => a.name.cmp(&b.name),
+  });
+
+  Ok(backups)
+}
+
+pub fn apply_backup_limits(max_count: Option<u32>, max_size_mb: Option<u64>) -> Result<(), String> {
+  if max_count.is_none() && max_size_mb.is_none() {
+    return Ok(());
+  }
+
+  let mut backups = collect_backups()?;
+
+  if let Some(limit) = max_count {
+    if backups.len() > limit as usize {
+      let mut to_remove = backups.split_off(limit as usize);
+      for entry in to_remove.drain(..) {
+        fs::remove_dir_all(&entry.path).map_err(|err| {
+          format!(
+            "Failed to remove old backup {}: {err}",
+            entry.path.display()
+          )
+        })?;
+      }
+    }
+  }
+
+  if let Some(max_mb) = max_size_mb {
+    let mut backups = collect_backups()?;
+    let max_bytes = max_mb.saturating_mul(1024 * 1024);
+    let mut total: u64 = backups.iter().map(|entry| entry.size_bytes).sum();
+
+    if total <= max_bytes {
+      return Ok(());
+    }
+
+    while total > max_bytes {
+      if let Some(oldest) = backups.pop() {
+        fs::remove_dir_all(&oldest.path)
+          .map_err(|err| format!("Failed to remove backup {}: {err}", oldest.path.display()))?;
+        total = total.saturating_sub(oldest.size_bytes);
+      } else {
+        break;
+      }
+    }
+  }
+
+  Ok(())
 }
 
 pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
@@ -212,6 +353,8 @@ pub fn backup_vencord_install(source_path: String) -> Result<BackupResult, Strin
 
   let backup_path = move_result?;
 
+  apply_backup_limits(options.max_backup_count, options.max_backup_size_mb)?;
+
   let theme_sources = options::resolve_themes(&options);
 
   if let Err(err) = themes::download_themes(&theme_sources) {
@@ -235,4 +378,68 @@ pub fn backup_vencord_install(source_path: String) -> Result<BackupResult, Strin
     restarted_clients: restarted,
     closing_skipped: discord_state.closing_skipped,
   })
+}
+
+fn to_backup_info(entries: Vec<BackupEntry>) -> Vec<BackupInfo> {
+  entries
+    .into_iter()
+    .map(|entry| BackupInfo {
+      name: entry.name,
+      path: entry.path.to_string_lossy().into_owned(),
+      size_bytes: entry.size_bytes,
+      created_at: Some(DateTime::<Local>::from(entry.modified).to_rfc3339()),
+    })
+    .collect()
+}
+
+#[tauri::command]
+pub fn list_backups() -> Result<Vec<BackupInfo>, String> {
+  let backups = collect_backups()?;
+  Ok(to_backup_info(backups))
+}
+
+fn is_valid_backup_name(name: &str) -> bool {
+  !name.is_empty() && !name.contains(['/', '\\']) && !name.contains("..")
+}
+
+#[tauri::command]
+pub fn delete_backups(names: Vec<String>) -> Result<(), String> {
+  if names.is_empty() {
+    return Ok(());
+  }
+
+  let root = backups_root()?;
+
+  for name in names {
+    if !is_valid_backup_name(&name) {
+      return Err(format!("Invalid backup name: {name}"));
+    }
+
+    let target = root.join(&name);
+
+    if !target.exists() {
+      continue;
+    }
+
+    let canonical_root = dunce::canonicalize(&root)
+      .map_err(|err| format!("Failed to resolve backup directory: {err}"))?;
+    let canonical_target = dunce::canonicalize(&target)
+      .map_err(|err| format!("Failed to resolve backup path {}: {err}", target.display()))?;
+
+    if !canonical_target.starts_with(&canonical_root) {
+      return Err(format!(
+        "Refusing to delete path outside backups directory: {}",
+        target.display()
+      ));
+    }
+
+    fs::remove_dir_all(&canonical_target).map_err(|err| {
+      format!(
+        "Failed to delete backup {}: {err}",
+        canonical_target.display()
+      )
+    })?;
+  }
+
+  Ok(())
 }

@@ -1,17 +1,18 @@
 import { useRef, useState } from 'react'
 import HomePage from "./pages/HomePage";
 import InstallPage from "./pages/InstallPage";
+import BackupsPage from "./pages/BackupsPage";
 // import LogsPage from "./pages/LogsPage";
 import DevTestsPage from "./pages/DevTestsPage";
 import SettingsPage from "./pages/SettingsPage";
 import Dock from "./components/Dock";
 import './App.css'
 
-import { House, FolderSync, ClipboardClock, FolderCode, Settings } from "lucide-react";
+import { House, FolderSync, ClipboardClock, FolderCode, Settings, Archive } from "lucide-react";
 
 void ClipboardClock; // temporary
 
-type Page = 'home' | 'install' | 'logs' | 'settings' | 'devTests';
+type Page = 'home' | 'install' | 'backups' | 'logs' | 'settings' | 'devTests';
 
 function App() {
   const [page, setPage] = useState<Page>('home');
@@ -43,8 +44,11 @@ function App() {
   const dockItems = [
     { icon: <House size={18} />, label: 'Home', onClick: () => handleNavigate('home') },
     { icon: <FolderSync size={18} />, label: 'Install', onClick: () => handleNavigate('install') },
+    { icon: <Archive size={18} />, label: 'Backups', onClick: () => handleNavigate('backups') },
     // { icon: <ClipboardClock size={18} />, label: 'Logs', onClick: () => handleNavigate('logs') },
-    ...(showDevTests ? [{ icon: <FolderCode size={18} />, label: 'Dev Tests', onClick: () => handleNavigate('devTests') }] : []),
+    ...(showDevTests
+      ? [{ icon: <FolderCode size={18} />, label: 'Dev Tests', onClick: () => handleNavigate('devTests') }]
+      : []),
     { icon: <Settings size={18} />, label: 'Settings', onClick: () => handleNavigate('settings') }
   ]
 
@@ -61,6 +65,7 @@ function App() {
         <div className="page">
           {page === 'home' && <HomePage />}
           {page === 'install' && <InstallPage />}
+          {page === 'backups' && <BackupsPage />}
           {/* {page === 'logs' && <LogsPage />} */}
           {showDevTests && page === 'devTests' && <DevTestsPage />}
           {page === 'settings' && (

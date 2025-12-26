@@ -29,11 +29,13 @@ export default function SettingsPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [dirtyFields, setDirtyFields] = useState({ 
+  const [dirtyFields, setDirtyFields] = useState({
     repoUrl: false,
     repoDir: false,
     userRepos: false,
     userThemes: false,
+    maxBackupCount: false,
+    maxBackupSizeMb: false,
   });
 
   useEffect(() => {
@@ -41,13 +43,21 @@ export default function SettingsPage({
       .then((data) => {
         setOptions(data);
         setUserReposText(data.userRepositories.join("\n"));
+        setUserThemesText(data.userThemes.join("\n"));
       })
       .catch((err) => setError(String(err)))
       .finally(() => setLoading(false));
   }, []);
 
   const hasPending =
-    saving || dirtyFields.repoUrl || dirtyFields.repoDir || dirtyFields.userRepos || dirtyFields.userThemes;
+    saving ||
+    
+    dirtyFields.repoUrl ||
+    dirtyFields.repoDir ||
+    dirtyFields.userRepos ||
+    dirtyFields.userThemes ||
+    dirtyFields.maxBackupCount ||
+    dirtyFields.maxBackupSizeMb;
 
   useEffect(() => {
     onPendingChange?.(hasPending);
@@ -98,10 +108,20 @@ export default function SettingsPage({
       .filter((line) => line.length > 0);
 
   const parseUserThemesText = () =>
-    userReposText
+    userThemesText
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
+
+  const parseNumberInput = (value: string) => {
+    if (value.trim() === "") return null;
+
+    const parsed = Number(value);
+
+    if (Number.isNaN(parsed) || parsed < 0) return null;
+
+    return Math.floor(parsed);
+  };
 
   const onRepoUrlBlur = async () => {
     if (!options || saving || !dirtyFields.repoUrl) return;
@@ -275,20 +295,20 @@ export default function SettingsPage({
             <h3>Provided repositories</h3>
             <div className='form-field'>
               <label>Included plguin sources</label>
-              <ul className='settings-list'>
+              <ul className='list'>
                 {options.providedRepositories.map((repo) => (
-                  <li key={repo.id} className='settings-list-item'>
-                    <label className='settings-row'>
+                  <li key={repo.id} className='list-item'>
+                    <label className='list-row'>
                       <input
                         type='checkbox'
                         checked={repo.enabled}
                         disabled={saving}
                         onChange={() => onToggleProvidedRepo(repo.id)}
                       />
-                      <div className='settings-meta'>
-                        <div className='settings-title'>{repo.name}</div>
-                        <div className='settings-url'>{repo.url}</div>
-                        <p className='settings-list-description'>{repo.description}</p>
+                      <div className='list-meta'>
+                        <div className='list-title'>{repo.name}</div>
+                        <div className='list-url'>{repo.url}</div>
+                        <p className='list-description'>{repo.description}</p>
                       </div>
                     </label>
                   </li>
@@ -304,20 +324,20 @@ export default function SettingsPage({
             <h3>Provided themes</h3>
             <div className='form-field'>
               <label>Included themes</label>
-              <ul className='settings-list'>
+              <ul className='list'>
                 {options.providedThemes.map((theme) => (
-                  <li key={theme.id} className='settings-list-item'>
-                    <label className='settings-row'>
+                  <li key={theme.id} className='list-item'>
+                    <label className='list-row'>
                       <input
                         type='checkbox'
                         checked={theme.enabled}
                         disabled={saving}
                         onChange={() => onToggleProvidedTheme(theme.id)}
                       />
-                      <div className='settings-meta'>
-                        <div className='settings-title'>{theme.name}</div>
-                        <div className='settings-url'>{theme.url}</div>
-                        <p className='settings-list-description'>{theme.description}</p>
+                      <div className='list-meta'>
+                        <div className='list-title'>{theme.name}</div>
+                        <div className='list-url'>{theme.url}</div>
+                        <p className='list-description'>{theme.description}</p>
                       </div>
                     </label>
                   </li>
@@ -347,6 +367,61 @@ export default function SettingsPage({
               <small>Each entry will be stored in the user options file and downloaded after patching</small>
             </div>
           </div>
+
+          <div className="card">
+            <h3>Backup retention</h3>
+            <div className="form-field">
+              <label htmlFor="max-backup-count">Maximum backups to keep</label>
+              <input
+                id="max-backup-count"
+                type="number"
+                className="text-input"
+                min={0}
+                value={options.maxBackupCount ?? ''}
+                onChange={(e) => {
+                  setOptions({ ...options, maxBackupCount: parseNumberInput(e.target.value) });
+                  setDirtyFields((prev) => ({ ...prev, maxBackupCount: true }));
+                  setMessage(null);
+                }}
+                onBlur={async () => {
+                  if (!options || saving || !dirtyFields.maxBackupCount) return;
+
+                  const saved = await saveOptions(options, { syncUserReposText: false });
+                  if (saved) {
+                    setDirtyFields((prev) => ({ ...prev, maxBackupCount: false }));
+                  }
+                }}
+                placeholder="Unlimited"
+              />
+              <small>Leave blank for unlimited backups. Older backups are removed after new ones are created</small>
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="max-backup-size">Maximum backup size (MB)</label>
+              <input
+                id="max-backup-size"
+                type="number"
+                className="text-input"
+                min={0}
+                value={options.maxBackupSizeMb ?? ''}
+                onChange={(e) => {
+                  setOptions({ ...options, maxBackupSizeMb: parseNumberInput(e.target.value) });
+                  setDirtyFields((prev) => ({ ...prev, maxBackupSizeMb: true }));
+                  setMessage(null);
+                }}
+                onBlur={async () => {
+                  if (!options || saving || !dirtyFields.maxBackupSizeMb) return;
+
+                  const saved = await saveOptions(options, { syncUserReposText: false });
+                  if (saved) {
+                    setDirtyFields((prev) => ({ ...prev, maxBackupSizeMb: false }));
+                  }
+                }}
+                placeholder="Unlimited"
+              />
+              <small>Oldest backups are pruned when the total size exceeds this value. Leave blank for no size limit</small>
+            </div>
+          </div>
           
           <div className="card">
             <h3>Custom repositories</h3>
@@ -372,9 +447,9 @@ export default function SettingsPage({
           <div className="card">
             <h3>Discord handling</h3>
             <div className="form-field">
-              <ul className="settings-list">
-                <li className="settings-list-item">
-                  <label className="settings-list-row checkbox-row" htmlFor="close-discord">
+              <ul className="list">
+                <li className="list-item">
+                  <label className="list-row checkbox-row" htmlFor="close-discord">
                     <input
                       id="close-discord"
                       type="checkbox"

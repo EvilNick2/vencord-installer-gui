@@ -215,13 +215,13 @@ export default function DevTestsPage() {
 
           {error && <p className="error">{error}</p>}
 
-          <ul className="settings-list">
+          <ul className="list">
             {STEP_DEFINITIONS.map((step) => (
-              <li key={step.id} className="settings-list-item">
-                <div className="settings-list-row">
-                  <div className="settings-list-meta">
-                    <span className="settings-list-title">{step.title}</span>
-                    <span className="settings-list-description">{step.description}</span>
+              <li key={step.id} className="list-item">
+                <div className="list-row">
+                  <div className="list-meta">
+                    <span className="list-title">{step.title}</span>
+                    <span className="list-description">{step.description}</span>
                   </div>
                   <div>
                     <button
@@ -243,13 +243,13 @@ export default function DevTestsPage() {
           <h3>Recent test results</h3>
           {sortedResults.length === 0 && <p className="muted">No modules have been run yet.</p>}
 
-          <ul className="settings-list">
+          <ul className="list">
             {sortedResults.map((entry) => (
-              <li key={entry.id} className="settings-list-item">
-                <div className="settings-list-row">
-                  <div className="settings-list-meta">
-                    <span className="settings-list-title">{entry.title}</span>
-                    <span className="settings-list-description">{formatTimestamp(entry.timestamp)}</span>
+              <li key={entry.id} className="list-item">
+                <div className="list-row">
+                  <div className="list-meta">
+                    <span className="list-title">{entry.title}</span>
+                    <span className="list-description">{formatTimestamp(entry.timestamp)}</span>
                     <span>{entry.summary}</span>
                   </div>
                 </div>

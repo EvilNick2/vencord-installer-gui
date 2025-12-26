@@ -35,6 +35,13 @@
   --skipped-bg: rgba(107, 114, 128, 0.08);
   --skipped-text: #6b7280;
   --skipped-border: rgba(107, 114, 128, 0.16);
+  --list-item-padding: 12px 14px;
+  --list-item-radius: 6px;
+  --list-row-gap: 10px;
+  --list-checkbox-offset: 3px;
+  --list-subtitle-size: 12px;
+  --list-meta-gap: 2px;
+  --list-code-size: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -119,6 +126,18 @@ body {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
+button.danger,
+.actions button.danger {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
+button.danger:hover,
+.actions button.danger:hover {
+  background: color-mix(in srgb, var(--danger-bg) 85%, transparent);
+}
+
 .sidebar button:hover,
 .actions button:hover {
   background: var(--button-hover);
@@ -187,6 +206,10 @@ h2 {
   margin-top: 0;
 }
 
+.card .muted {
+  margin: 4px 0 0 0;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -195,6 +218,9 @@ h2 {
 }
 
 .card-header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 10px;
   border-radius: 4px;
   border: 1px solid var(--border);
@@ -202,6 +228,10 @@ h2 {
   color: var(--button-text);
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.card-header button svg {
+  display: block;
 }
 
 .card-header button:hover {
@@ -216,6 +246,7 @@ h2 {
 .actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .logs-box {
@@ -745,7 +776,7 @@ h2 {
 }
 
 small,
-.settings-list-description {
+.list-description {
   color: var(--muted);
 }
 
@@ -775,7 +806,7 @@ small,
   margin-top: 8px;
 }
 
-.settings-list {
+.list {
   list-style: none;
   padding-left: 0;
   margin: 0;
@@ -784,40 +815,63 @@ small,
   gap: 8px;
 }
 
-.settings-list-item {
+.list-item {
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px 14px;
+  border-radius: var(--list-item-radius);
+  padding: var(--list-item-padding);
 }
 
-.settings-row {
+.list-row {
   display: flex;
-  gap: 10px;
+  gap: var(--list-row-gap);
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
-.settings-meta {
+.list-row input[type='checkbox'] {
+  margin-top: 0;
+}
+
+.list-meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--list-meta-gap);
   flex: 1;
   min-width: 0;
 }
 
-.settings-title {
+.list-title {
   font-weight: 600;
 }
 
-.settings-list-description {
+.list-description {
   display: block;
+  font-size: var(--list-subtitle-size);
   margin: 0;
 }
 
-.settings-url {
+.list-url {
   font-family: monospace;
-  font-size: 12px;
+  font-size: var(--list-code-size);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.list-size {
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.list-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  color: var(--muted);
 }
 
 .checkbox-field {
@@ -832,7 +886,7 @@ small,
 }
 
 .checkbox-row input {
-  margin-top: 3px;
+  margin-top: var(--list-checkbox-offset);
 }
 
 .checkbox-title {

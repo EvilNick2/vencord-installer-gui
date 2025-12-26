@@ -14,9 +14,17 @@ fn default_repo_base_dir() -> String {
   let home_dir = env::var(home_var).unwrap_or_else(|_| ".".to_string());
 
   PathBuf::from(home_dir)
-  .join("Vencord")
-  .to_string_lossy()
-  .into_owned()
+    .join("Vencord")
+    .to_string_lossy()
+    .into_owned()
+}
+
+fn default_max_backup_count() -> Option<u32> {
+  None
+}
+
+fn default_max_backup_size_mb() -> Option<u64> {
+  None
 }
 
 fn default_selected_discord_clients() -> Vec<String> {
@@ -126,6 +134,10 @@ pub struct OptionsResponse {
   pub close_discord_on_backup: bool,
   #[serde(default = "default_selected_discord_clients")]
   pub selected_discord_clients: Vec<String>,
+  #[serde(default = "default_max_backup_count")]
+  pub max_backup_count: Option<u32>,
+  #[serde(default = "default_max_backup_size_mb")]
+  pub max_backup_size_mb: Option<u64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -146,6 +158,10 @@ pub struct UserOptions {
   pub close_discord_on_backup: bool,
   #[serde(default = "default_selected_discord_clients")]
   pub selected_discord_clients: Vec<String>,
+  #[serde(default = "default_max_backup_count")]
+  pub max_backup_count: Option<u32>,
+  #[serde(default = "default_max_backup_size_mb")]
+  pub max_backup_size_mb: Option<u64>,
 }
 
 impl Default for UserOptions {
@@ -172,6 +188,8 @@ impl Default for UserOptions {
         .collect(),
       close_discord_on_backup: default_true(),
       selected_discord_clients: default_selected_discord_clients(),
+      max_backup_count: default_max_backup_count(),
+      max_backup_size_mb: default_max_backup_size_mb(),
     }
   }
 }
@@ -339,6 +357,8 @@ fn to_response(options: UserOptions) -> OptionsResponse {
     provided_themes: merge_provided_themes(&options.provided_themes),
     close_discord_on_backup: options.close_discord_on_backup,
     selected_discord_clients: options.selected_discord_clients,
+    max_backup_count: options.max_backup_count,
+    max_backup_size_mb: options.max_backup_size_mb,
   }
 }
 
@@ -383,6 +403,8 @@ fn to_storage(options: OptionsResponse) -> UserOptions {
     provided_themes,
     close_discord_on_backup: options.close_discord_on_backup,
     selected_discord_clients: options.selected_discord_clients,
+    max_backup_count: options.max_backup_count,
+    max_backup_size_mb: options.max_backup_size_mb,
   }
 }
 

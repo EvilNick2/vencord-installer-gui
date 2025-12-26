@@ -22,6 +22,8 @@ fn main() {
       })
       .invoke_handler(tauri::generate_handler![
         flows::backup::backup_vencord_install,
+        flows::backup::delete_backups,
+        flows::backup::list_backups,
         dependencies::install_dependency,
         dependencies::list_dependencies,
         flows::discord_clients::list_discord_processes,

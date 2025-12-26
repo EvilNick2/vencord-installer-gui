@@ -231,6 +231,13 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
     })
     .await?;
 
+    run_blocking({
+      let max_count = options.max_backup_count;
+      let max_size = options.max_backup_size_mb;
+      move || backup::apply_backup_limits(max_count, max_size)
+    })
+    .await?;
+
     let backup_result = backup::BackupResult {
       source_path: vencord_install.to_string_lossy().into_owned(),
       backup_path: backup_path.to_string_lossy().into_owned(),
