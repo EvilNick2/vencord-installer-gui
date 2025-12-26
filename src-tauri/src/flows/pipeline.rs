@@ -217,6 +217,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   emit_step_event(&app, PatchFlowStep::CloseDiscord, &close_step);
 
   let vencord_install = PathBuf::from(&options.vencord_repo_dir);
+  let theme_sources = options::resolve_themes(&options);
 
   emit_step_event(
     &app,
@@ -227,7 +228,8 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   let backup_step = if vencord_install.exists() {
     let backup_path = run_blocking({
       let vencord_install = vencord_install.clone();
-      move || backup::move_vencord_install(&vencord_install)
+      let theme_sources = theme_sources.clone();
+      move || backup::move_vencord_install(&vencord_install, &theme_sources)
     })
     .await?;
 

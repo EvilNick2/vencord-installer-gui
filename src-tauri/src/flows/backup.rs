@@ -235,7 +235,10 @@ pub fn apply_backup_limits(max_count: Option<u32>, max_size_mb: Option<u64>) -> 
   Ok(())
 }
 
-pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
+pub fn move_vencord_install(
+  source: &Path,
+  themes: &[options::ProvidedThemeInfo],
+) -> Result<PathBuf, String> {
   if !source.exists() {
     return Err(format!("Vencord install not found at {}", source.display()));
   }
@@ -284,7 +287,7 @@ pub fn move_vencord_install(source: &Path) -> Result<PathBuf, String> {
     }
   }
 
-  themes::move_themes_to_backup(&destination_root)?;
+  themes::move_themes_to_backup(&destination_root, themes)?;
 
   Ok(destination_root)
 }
@@ -339,10 +342,11 @@ fn remove_node_modules(source: &Path) -> Result<(), String> {
 #[tauri::command]
 pub fn backup_vencord_install(source_path: String) -> Result<BackupResult, String> {
   let options = options::read_user_options()?;
+  let theme_sources = options::resolve_themes(&options);
 
   let discord_state = discord_clients::close_discord_clients(options.close_discord_on_backup);
 
-  let move_result = move_vencord_install(Path::new(&source_path));
+  let move_result = move_vencord_install(Path::new(&source_path), &theme_sources);
 
   if let Err(err) = move_result {
     if !discord_state.closing_skipped {
@@ -354,8 +358,6 @@ pub fn backup_vencord_install(source_path: String) -> Result<BackupResult, Strin
   let backup_path = move_result?;
 
   apply_backup_limits(options.max_backup_count, options.max_backup_size_mb)?;
-
-  let theme_sources = options::resolve_themes(&options);
 
   if let Err(err) = themes::download_themes(&theme_sources) {
     if !discord_state.closing_skipped {

@@ -53,52 +53,6 @@ fn theme_file_name(theme: &ProvidedThemeInfo) -> Result<String, String> {
     .ok_or_else(|| format!("could not determine file name from url: {}", theme.url))
 }
 
-fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<(), String> {
-  fs::create_dir(destination).map_err(|err| {
-    format!(
-      "Failed to create backup directory {}: {err}",
-      destination.display()
-    )
-  })?;
-
-  for entry in fs::read_dir(source)
-    .map_err(|err| format!("failed to read directory {}: {err}", source.display()))?
-  {
-    let entry = entry.map_err(|err| {
-      format!(
-        "Failed to read directory entry in {}: {err}",
-        source.display()
-      )
-    })?;
-    let path = entry.path();
-    let dest_path = destination.join(entry.file_name());
-
-    if path.is_dir() {
-      copy_dir_recursive(&path, &dest_path)?;
-    } else {
-      fs::copy(&path, &dest_path).map_err(|err| {
-        format!(
-          "Failed to copy {} to {}: {err}",
-          path.display(),
-          dest_path.display()
-        )
-      })?;
-    }
-  }
-
-  Ok(())
-}
-
-fn remove_dir(source: &Path) -> Result<(), String> {
-  if source.is_dir() {
-    fs::remove_dir_all(source)
-      .map_err(|err| format!("Failed to remove directory {}: {err}", source.display()))
-  } else {
-    fs::remove_file(source)
-      .map_err(|err| format!("Failed to remove file {}: {err}", source.display()))
-  }
-}
-
 fn is_cross_device_link(err: &io::Error) -> bool {
   match err.raw_os_error() {
     Some(18) => true,
@@ -117,31 +71,83 @@ fn is_cross_device_link(err: &io::Error) -> bool {
   }
 }
 
-pub fn move_themes_to_backup(destination: &Path) -> Result<Option<PathBuf>, String> {
+pub fn move_themes_to_backup(
+  destination: &Path,
+  themes: &[ProvidedThemeInfo],
+) -> Result<Option<PathBuf>, String> {
   let source = theme_dir()?;
 
-  if !source.exists() {
+  if themes.is_empty() || !source.exists() {
+    return Ok(None);
+  }
+
+  let mut allowed_files = Vec::new();
+
+  for theme in themes {
+    let file_name = theme_file_name(theme)?;
+    if !file_name.is_empty() {
+      allowed_files.push(file_name);
+    }
+  }
+
+  if allowed_files.is_empty() {
     return Ok(None);
   }
 
   let dest_path = destination.join("themes");
+  let mut moved_any = false;
 
-  match fs::rename(&source, &dest_path) {
-    Ok(_) => Ok(Some(dest_path)),
-    Err(err) => {
-      if !is_cross_device_link(&err) {
-        return Err(format!(
-          "Failed to move themes from {} to {}: {err}",
-          source.display(),
-          dest_path.display()
-        ));
-      }
+  for file_name in allowed_files {
+    let source_file = source.join(&file_name);
 
-      copy_dir_recursive(&source, &dest_path)?;
-      remove_dir(&source)?;
-
-      Ok(Some(dest_path))
+    if !source_file.exists() {
+      continue;
     }
+
+    if !moved_any {
+      fs::create_dir_all(&dest_path).map_err(|err| {
+        format!(
+          "Failed to create backup theme directory {}: {err}",
+          dest_path.display(),
+        )
+      })?;
+    }
+
+    let dest_file = dest_path.join(&file_name);
+
+    match fs::rename(&source_file, &dest_file) {
+      Ok(_) => moved_any = true,
+      Err(err) => {
+        if !is_cross_device_link(&err) {
+          return Err(format!(
+            "Failed to move theme {} to backup: {err}",
+            source_file.display()
+          ));
+        }
+
+        fs::copy(&source_file, &dest_file).map_err(|err| {
+          format!(
+            "Failed to copy {} to {}: {err}",
+            source_file.display(),
+            dest_file.display()
+          )
+        })?;
+        fs::remove_file(&source_file).map_err(|err| {
+          format!(
+            "Failed to remove original theme {}: {err}",
+            source_file.display(),
+          )
+        })?;
+
+        moved_any = true;
+      }
+    }
+  }
+
+  if moved_any {
+    Ok(Some(dest_path))
+  } else {
+    Ok(None)
   }
 }
 
