@@ -29,6 +29,7 @@ export default function SettingsPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [openSection, setOpenSection] = useState<string | null>("vencord-repo")
   const [dirtyFields, setDirtyFields] = useState({
     repoUrl: false,
     repoDir: false,
@@ -66,6 +67,10 @@ export default function SettingsPage({
   useEffect(() => () => {
     onPendingChange?.(false);
   }, [onPendingChange]);
+
+  const toggleSection = (id: string) => {
+    setOpenSection((prev) => (prev === id ? null : id));
+  };
 
   const saveOptions = async (
     nextOptions: UserOptions,
@@ -234,240 +239,283 @@ export default function SettingsPage({
 
       {!loading && options && (
         <>
-          <div className="card">
-            <h3>Vencord repository</h3>
-            <div className='form-field'>
-              <label htmlFor='vencord-repo'>Vencord Git clone URL</label>
-              <input
-                id='vencord-repo'
-                className='text-input'
-                value={options.vencordRepoUrl}
-                onChange={(e) => {
-                  setOptions({ ...options, vencordRepoUrl: e.target.value });
-                  setDirtyFields((prev) => ({ ...prev, repoUrl: true }));
-                  setMessage(null);
-                }}
-                onBlur={onRepoUrlBlur}
-              />
-              <small>Used when cloning the Vencord source during install/update</small>
-            </div>
+          {[
+            {
+              id: "vencord-repo",
+              title: "Vencord repository",
+              content: (
+                <>
+                  <div className='form-field'>
+                    <label htmlFor='vencord-repo'>Vencord Git clone URL</label>
+                    <input
+                      id='vencord-repo'
+                      className='text-input'
+                      value={options.vencordRepoUrl}
+                      onChange={(e) => {
+                        setOptions({ ...options, vencordRepoUrl: e.target.value });
+                        setDirtyFields((prev) => ({ ...prev, repoUrl: true }));
+                        setMessage(null);
+                      }}
+                      onBlur={onRepoUrlBlur}
+                    />
+                    <small>Used when cloning the Vencord source during install/update</small>
+                  </div>
 
-            <div className="form-field">
-              <label htmlFor="vencord-repo-dir">Clone destination</label>
-              <div className="input-row input-row--icon">
-                <input
-                  id="vencord-repo-dir"
-                  className="text-input"
-                  value={options.vencordRepoDir}
-                  onChange={(e) => {
-                    setOptions({ ...options, vencordRepoDir: e.target.value });
-                    setDirtyFields((prev) => ({ ...prev, repoDir: true }));
-                    setMessage(null);
-                  }}
-                  onBlur={async () => {
-                    if (!options || saving || !dirtyFields.repoDir) return;
+                  <div className="form-field">
+                    <label htmlFor="vencord-repo-dir">Clone destination</label>
+                    <div className="input-row input-row--icon">
+                      <input
+                        id="vencord-repo-dir"
+                        className="text-input"
+                        value={options.vencordRepoDir}
+                        onChange={(e) => {
+                          setOptions({ ...options, vencordRepoDir: e.target.value });
+                          setDirtyFields((prev) => ({ ...prev, repoDir: true }));
+                          setMessage(null);
+                        }}
+                        onBlur={async () => {
+                          if (!options || saving || !dirtyFields.repoDir) return;
 
-                    const saved = await saveOptions(options, { syncUserReposText: false });
-                    if (saved) {
-                      setDirtyFields((prev) => ({ ...prev, repoDir: false }));
-                    }
-                  }}
-                  placeholder="e.g., C:/Users/user/Documents/Vencord"
-                />
+                          const saved = await saveOptions(options, { syncUserReposText: false });
+                          if (saved) {
+                            setDirtyFields((prev) => ({ ...prev, repoDir: false }));
+                          }
+                        }}
+                        placeholder="e.g., C:/Users/user/Documents/Vencord"
+                      />
+                      <button
+                        type="button"
+                        onClick={onChooseRepoDir}
+                        disabled={saving}
+                        className="input-icon-button"
+                        aria-label="Choose folder"
+                      >
+                        <FolderOpen size={18} />
+                      </button>
+                    </div>
+                    <small className="helper-text" aria-live="polite">
+                      <p>The installer will clone or update the Vencord source directly at this path, using the folder name you provide</p>
+                      <p>Defaults to your home directory</p>
+                    </small>
+                  </div>
+                </>
+              ),
+            },
+            {
+              id: "provided-repos",
+              title: "Provided repositories",
+              content: (
+                <div className='form-field'>
+                  <label>Included plugin sources</label>
+                  <ul className='list'>
+                    {options.providedRepositories.map((repo) => (
+                      <li key={repo.id} className='list-item'>
+                        <label className='list-row'>
+                          <input
+                            type='checkbox'
+                            checked={repo.enabled}
+                            disabled={saving}
+                            onChange={() => onToggleProvidedRepo(repo.id)}
+                          />
+                          <div className='list-meta'>
+                            <div className='list-title'>{repo.name}</div>
+                            <div className='list-url'>{repo.url}</div>
+                            <p className='list-description'>{repo.description}</p>
+                          </div>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  <small>
+                    Toggle which bundled repositories should be used. This list may change with app updates if a repositories is added, removed, or marked unstable
+                  </small>
+                </div>
+              ),
+            },
+            {
+              id: "provided-themes",
+              title: "Provided themes",
+              content: (
+                <div className='form-field'>
+                  <label>Included themes</label>
+                  <ul className='list'>
+                    {options.providedThemes.map((theme) => (
+                      <li key={theme.id} className='list-item'>
+                        <label className='list-row'>
+                          <input
+                            type='checkbox'
+                            checked={theme.enabled}
+                            disabled={saving}
+                            onChange={() => onToggleProvidedTheme(theme.id)}
+                          />
+                          <div className='list-meta'>
+                            <div className='list-title'>{theme.name}</div>
+                            <div className='list-url'>{theme.url}</div>
+                            <p className='list-description'>{theme.description}</p>
+                          </div>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  <small>Toggle which bundled themes should be downloaded after patching</small>
+                </div>
+              ),
+            },
+            {
+              id: "custom-themes",
+              title: "Custom themes",
+              content: (
+                <div className='form-field'>
+                  <label htmlFor='user-themes'>Custom user themes</label>
+                  <textarea
+                    id='user-themes'
+                    className='text-area'
+                    rows={5}
+                    value={userThemesText}
+                    onChange={(e) => {
+                      setUserThemesText(e.target.value);
+                      setDirtyFields((prev) => ({ ...prev, userThemes: true }));
+                      setMessage(null);
+                    }}
+                    onBlur={onUserThemesBlur}
+                    placeholder='One theme URL per line'
+                  />
+                  <small>Each entry will be stored in the user options file and downloaded after patching</small>
+                </div>
+              ),
+            },
+            {
+              id: "custom-repos",
+              title: "Custom repositories",
+              content: (
+                <div className='form-field'>
+                  <label htmlFor='user-repos'>Custom user plugin repositories</label>
+                  <textarea
+                    id='user-repos'
+                    className='text-area'
+                    rows={5}
+                    value={userReposText}
+                    onChange={(e) => {
+                      setUserReposText(e.target.value);
+                      setDirtyFields((prev) => ({ ...prev, userRepos: true }));
+                      setMessage(null);
+                    }}
+                    onBlur={onUserReposBlur}
+                    placeholder='One repository per line'
+                  />
+                  <small>Each entry will be stored in the user options file for installer use</small>
+                </div>
+              ),
+            },
+            {
+              id: "backups",
+              title: "Backup retention",
+              content: (
+                <>
+                  <div className="form-field">
+                    <label htmlFor="max-backup-count">Maximum backups to keep</label>
+                    <input
+                      id="max-backup-count"
+                      type="number"
+                      className="text-input"
+                      min={0}
+                      value={options.maxBackupCount ?? ''}
+                      onChange={(e) => {
+                        setOptions({ ...options, maxBackupCount: parseNumberInput(e.target.value) });
+                        setDirtyFields((prev) => ({ ...prev, maxBackupCount: true }));
+                        setMessage(null);
+                      }}
+                      onBlur={async () => {
+                        if (!options || saving || !dirtyFields.maxBackupCount) return;
+
+                        const saved = await saveOptions(options, { syncUserReposText: false });
+                        if (saved) {
+                          setDirtyFields((prev) => ({ ...prev, maxBackupCount: false }));
+                        }
+                      }}
+                      placeholder="Unlimited"
+                    />
+                    <small>Leave blank for unlimited backups. Older backups are removed after new ones are created.</small>
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="max-backup-size">Maximum backup size (MB)</label>
+                    <input
+                      id="max-backup-size"
+                      type="number"
+                      className="text-input"
+                      min={0}
+                      value={options.maxBackupSizeMb ?? ''}
+                      onChange={(e) => {
+                        setOptions({ ...options, maxBackupSizeMb: parseNumberInput(e.target.value) });
+                        setDirtyFields((prev) => ({ ...prev, maxBackupSizeMb: true }));
+                        setMessage(null);
+                      }}
+                      onBlur={async () => {
+                        if (!options || saving || !dirtyFields.maxBackupSizeMb) return;
+
+                        const saved = await saveOptions(options, { syncUserReposText: false });
+                        if (saved) {
+                          setDirtyFields((prev) => ({ ...prev, maxBackupSizeMb: false }));
+                        }
+                      }}
+                      placeholder="Unlimited"
+                    />
+                    <small>Oldest backups are pruned when the total size exceeds this value. Leave blank for no size limit.</small>
+                  </div>
+                </>
+              ),
+            },
+            {
+              id: "discord",
+              title: "Discord handling",
+              content: (
+                <div className='form-field'>
+                  <ul className='list'>
+                    <li className='list-item'>
+                      <label className='list-row'>
+                        <input
+                          type='checkbox'
+                          checked={options.closeDiscordOnBackup}
+                          disabled={saving}
+                          onChange={onToggleCloseDiscord}
+                        />
+                        <div className='list-meta'>
+                          <div className='list-title'>Close Discord clients before backup</div>
+                          <p className='list-description'>When enabled, the installer will temporarily close Discord instances before moving Vencord files and then reopen them afterward</p>
+                        </div>
+                      </label>
+                    </li>
+                  </ul>
+                </div>
+              ),
+            },
+          ].map((section) => {
+            const isOpen = openSection === section.id;
+
+            return (
+              <div key={section.id} className={`card accordion ${isOpen ? "is-open" : ""}`}>
                 <button
                   type="button"
-                  onClick={onChooseRepoDir}
-                  disabled={saving}
-                  className="input-icon-button"
-                  aria-label="Choose folder"
+                  className="accordion-header"
+                  onClick={() => toggleSection(section.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={`${section.id}-content`}
                 >
-                  <FolderOpen size={18} />
+                  <span className="accordion-title">{section.title}</span>
+                  <span className="accordion-chevron" aria-hidden="true">▾</span>
                 </button>
+
+                <div
+                  id={`${section.id}-content`}
+                  className="accordion-content"
+                  aria-hidden={!isOpen}
+                >
+                  <div className="accordion-content-inner">{section.content}</div>
+                </div>
               </div>
-              <small className="helper-text" aria-live="polite">
-                <p>The installer will clone or update the Vencord source directly at this path, using the folder name you provide</p>
-                <p>Defaults to your home directory</p>
-              </small>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Provided repositories</h3>
-            <div className='form-field'>
-              <label>Included plguin sources</label>
-              <ul className='list'>
-                {options.providedRepositories.map((repo) => (
-                  <li key={repo.id} className='list-item'>
-                    <label className='list-row'>
-                      <input
-                        type='checkbox'
-                        checked={repo.enabled}
-                        disabled={saving}
-                        onChange={() => onToggleProvidedRepo(repo.id)}
-                      />
-                      <div className='list-meta'>
-                        <div className='list-title'>{repo.name}</div>
-                        <div className='list-url'>{repo.url}</div>
-                        <p className='list-description'>{repo.description}</p>
-                      </div>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-              <small>
-                Toggle which bundled repositories should be used. This list may change with app updates if a repositories is added, removed, or marked unstable
-              </small>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Provided themes</h3>
-            <div className='form-field'>
-              <label>Included themes</label>
-              <ul className='list'>
-                {options.providedThemes.map((theme) => (
-                  <li key={theme.id} className='list-item'>
-                    <label className='list-row'>
-                      <input
-                        type='checkbox'
-                        checked={theme.enabled}
-                        disabled={saving}
-                        onChange={() => onToggleProvidedTheme(theme.id)}
-                      />
-                      <div className='list-meta'>
-                        <div className='list-title'>{theme.name}</div>
-                        <div className='list-url'>{theme.url}</div>
-                        <p className='list-description'>{theme.description}</p>
-                      </div>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-              <small>Toggle which bundled themes should be downloaded after patching</small>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Custom themes</h3>
-            <div className='form-field'>
-              <label htmlFor='user-themes'>Custom user themes</label>
-              <textarea
-                id='user-themes'
-                className='text-area'
-                rows={5}
-                value={userThemesText}
-                onChange={(e) => {
-                  setUserThemesText(e.target.value);
-                  setDirtyFields((prev) => ({ ...prev, userThemes: true }));
-                  setMessage(null);
-                }}
-                onBlur={onUserThemesBlur}
-                placeholder='One theme URL per line'
-              />
-              <small>Each entry will be stored in the user options file and downloaded after patching</small>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Backup retention</h3>
-            <div className="form-field">
-              <label htmlFor="max-backup-count">Maximum backups to keep</label>
-              <input
-                id="max-backup-count"
-                type="number"
-                className="text-input"
-                min={0}
-                value={options.maxBackupCount ?? ''}
-                onChange={(e) => {
-                  setOptions({ ...options, maxBackupCount: parseNumberInput(e.target.value) });
-                  setDirtyFields((prev) => ({ ...prev, maxBackupCount: true }));
-                  setMessage(null);
-                }}
-                onBlur={async () => {
-                  if (!options || saving || !dirtyFields.maxBackupCount) return;
-
-                  const saved = await saveOptions(options, { syncUserReposText: false });
-                  if (saved) {
-                    setDirtyFields((prev) => ({ ...prev, maxBackupCount: false }));
-                  }
-                }}
-                placeholder="Unlimited"
-              />
-              <small>Leave blank for unlimited backups. Older backups are removed after new ones are created</small>
-            </div>
-
-            <div className="form-field">
-              <label htmlFor="max-backup-size">Maximum backup size (MB)</label>
-              <input
-                id="max-backup-size"
-                type="number"
-                className="text-input"
-                min={0}
-                value={options.maxBackupSizeMb ?? ''}
-                onChange={(e) => {
-                  setOptions({ ...options, maxBackupSizeMb: parseNumberInput(e.target.value) });
-                  setDirtyFields((prev) => ({ ...prev, maxBackupSizeMb: true }));
-                  setMessage(null);
-                }}
-                onBlur={async () => {
-                  if (!options || saving || !dirtyFields.maxBackupSizeMb) return;
-
-                  const saved = await saveOptions(options, { syncUserReposText: false });
-                  if (saved) {
-                    setDirtyFields((prev) => ({ ...prev, maxBackupSizeMb: false }));
-                  }
-                }}
-                placeholder="Unlimited"
-              />
-              <small>Oldest backups are pruned when the total size exceeds this value. Leave blank for no size limit</small>
-            </div>
-          </div>
-          
-          <div className="card">
-            <h3>Custom repositories</h3>
-            <div className='form-field'>
-              <label htmlFor='user-repos'>Custom user plugin repositories</label>
-              <textarea
-                id='user-repos'
-                className='text-area'
-                rows={5}
-                value={userReposText}
-                onChange={(e) => {
-                  setUserReposText(e.target.value);
-                  setDirtyFields((prev) => ({ ...prev, userRepos: true }));
-                  setMessage(null);
-                }}
-                onBlur={onUserReposBlur}
-                placeholder='One repository per line'
-              />
-              <small>Each entry will be stored in the user options file for installer use</small>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Discord handling</h3>
-            <div className="form-field">
-              <ul className="list">
-                <li className="list-item">
-                  <label className="list-row checkbox-row" htmlFor="close-discord">
-                    <input
-                      id="close-discord"
-                      type="checkbox"
-                      checked={options.closeDiscordOnBackup}
-                      disabled={saving}
-                      onChange={onToggleCloseDiscord}
-                    />
-                    <div>
-                      <div className="checkbox-title">Close Discord clients before backup</div>
-                      <small>
-                        When enabled, the installer will temporarily close Discord instance before moving Vencord files and then reopen them afterward
-                      </small>
-                    </div>
-                  </label>
-                </li>
-              </ul>
-            </div>
-          </div>
+            );
+          })}
 
           {message && <p className='status-text'>{message}</p>}
         </>
