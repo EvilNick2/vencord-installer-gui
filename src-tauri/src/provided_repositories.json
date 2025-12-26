@@ -109,6 +109,6 @@
     "name": "HolyNotes",
     "url": "https://github.com/WolfPlugs/HolyNotes-VC.git",
     "description": "Save messages locally to collections",
-    "defaultEnabled": false
+    "defaultEnabled": true
   }
 ]
