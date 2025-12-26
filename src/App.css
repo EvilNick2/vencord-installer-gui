@@ -271,7 +271,7 @@ h2 {
 }
 
 .accordion.is-open .accordion-content-inner {
-  padding: 12px 0 16px;
+  padding: 12px 0 2px;
 }
 
 .card h3 {

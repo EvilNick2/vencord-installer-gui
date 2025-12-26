@@ -333,6 +333,29 @@ export default function SettingsPage({
               ),
             },
             {
+              id: "custom-repos",
+              title: "Custom repositories",
+              content: (
+                <div className='form-field'>
+                  <label htmlFor='user-repos'>Custom user plugin repositories</label>
+                  <textarea
+                    id='user-repos'
+                    className='text-area'
+                    rows={5}
+                    value={userReposText}
+                    onChange={(e) => {
+                      setUserReposText(e.target.value);
+                      setDirtyFields((prev) => ({ ...prev, userRepos: true }));
+                      setMessage(null);
+                    }}
+                    onBlur={onUserReposBlur}
+                    placeholder='One repository per line'
+                  />
+                  <small>Each entry will be stored in the user options file for installer use</small>
+                </div>
+              ),
+            },
+            {
               id: "provided-themes",
               title: "Provided themes",
               content: (
@@ -381,29 +404,6 @@ export default function SettingsPage({
                     placeholder='One theme URL per line'
                   />
                   <small>Each entry will be stored in the user options file and downloaded after patching</small>
-                </div>
-              ),
-            },
-            {
-              id: "custom-repos",
-              title: "Custom repositories",
-              content: (
-                <div className='form-field'>
-                  <label htmlFor='user-repos'>Custom user plugin repositories</label>
-                  <textarea
-                    id='user-repos'
-                    className='text-area'
-                    rows={5}
-                    value={userReposText}
-                    onChange={(e) => {
-                      setUserReposText(e.target.value);
-                      setDirtyFields((prev) => ({ ...prev, userRepos: true }));
-                      setMessage(null);
-                    }}
-                    onBlur={onUserReposBlur}
-                    placeholder='One repository per line'
-                  />
-                  <small>Each entry will be stored in the user options file for installer use</small>
                 </div>
               ),
             },
