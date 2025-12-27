@@ -8,7 +8,7 @@
     "installCommands": {
       "windows": {
         "command": "powershell",
-        "args": ["-Command", "winget install -e --id OpenJS.NodeJS.LTS"],
+        "args": ["-Command", "winget install -e --id OpenJS.NodeJS.LTS --source winget --accept-source-agreements --accept-package-agreements"],
         "displayLabel": "Install with winget"
       },
       "macos": {
@@ -80,7 +80,7 @@
     "installCommands": {
       "windows": {
         "command": "powershell",
-        "args": ["-Command", "winget install -e --id Git.Git"],
+        "args": ["-Command", "winget install -e --id Git.Git --source winget --accept-source-agreements --accept-package-agreements"],
         "displayLabel": "Install with winget"
       },
       "macos": {
