@@ -42,14 +42,14 @@ function App() {
   };
 
   const dockItems = [
-    { icon: <House size={18} />, label: 'Home', onClick: () => handleNavigate('home') },
-    { icon: <FolderSync size={18} />, label: 'Install', onClick: () => handleNavigate('install') },
-    { icon: <Archive size={18} />, label: 'Backups', onClick: () => handleNavigate('backups') },
-    // { icon: <ClipboardClock size={18} />, label: 'Logs', onClick: () => handleNavigate('logs') },
+    { icon: <House size={18} />, label: 'Home', active: page === 'home', onClick: () => handleNavigate('home') },
+    { icon: <FolderSync size={18} />, label: 'Install', active: page === 'install', onClick: () => handleNavigate('install') },
+    { icon: <Archive size={18} />, label: 'Backups', active: page === 'backups', onClick: () => handleNavigate('backups') },
+    // { icon: <ClipboardClock size={18} />, label: 'Logs', active: page === 'logs', onClick: () => handleNavigate('logs') },
     ...(showDevTests
-      ? [{ icon: <FolderCode size={18} />, label: 'Dev Tests', onClick: () => handleNavigate('devTests') }]
+      ? [{ icon: <FolderCode size={18} />, label: 'Dev Tests', active: page === 'devTests', onClick: () => handleNavigate('devTests') }]
       : []),
-    { icon: <Settings size={18} />, label: 'Settings', onClick: () => handleNavigate('settings') }
+    { icon: <Settings size={18} />, label: 'Settings', active: page === 'settings', onClick: () => handleNavigate('settings') }
   ]
 
   return (

@@ -18,6 +18,7 @@ export type DockItemData = {
   label: React.ReactNode;
   onClick: () => void;
   className?: string;
+  active?: boolean;
 };
 
 export type DockProps = {
@@ -35,6 +36,7 @@ type DockItemProps = {
   className?: string;
   children: React.ReactNode;
   onClick?: () => void;
+  active?: boolean;
   mouseX: MotionValue<number>;
   spring: SpringOptions;
   distance: number;
@@ -46,6 +48,7 @@ function DockItem({
   children,
   className = '',
   onClick,
+  active = false,
   mouseX,
   spring,
   distance,
@@ -78,10 +81,13 @@ function DockItem({
       onFocus={() => isHovered.set(1)}
       onBlur={() => isHovered.set(0)}
       onClick={onClick}
-      className={`dock-item ${className}`}
+      whileTap={{ scale: 0.75 }}
+      transition={{ type: 'spring', stiffness: 450, damping: 26 }}
+      className={`dock-item ${active ? 'is-active' : ''} ${className}`.trim()}
       tabIndex={0}
       role="button"
       aria-haspopup="true"
+      aria-current={active ? 'page' : undefined}
     >
       {Children.map(children, child =>
         React.isValidElement(child)
@@ -179,6 +185,7 @@ export default function Dock({
             key={index}
             onClick={item.onClick}
             className={item.className}
+            active={item.active}
             mouseX={mouseX}
             spring={spring}
             distance={distance}
