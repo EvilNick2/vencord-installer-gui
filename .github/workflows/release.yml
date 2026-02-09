@@ -31,9 +31,18 @@ jobs:
       - name: Check for version bump
         id: check
         run: |
+          new_pkg_version=$(jq -r '.version' package.json)
+          new_tauri_version=$(jq -r '.version' src-tauri/tauri.conf.json)
+
+          if [[ "$new_pkg_version" != "$new_tauri_version" ]]; then
+            echo "package.json and tauri.conf.json version fields diverged; cannot determine release version." >&2
+            exit 1
+          fi
+
           if [[ "${GITHUB_EVENT_NAME}" != "push" ]]; then
             echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "release_version=" >> "$GITHUB_OUTPUT"
+            echo "release_version=$new_tauri_version" >> "$GITHUB_OUTPUT"
+            echo "Manual trigger detected; releasing current version $new_tauri_version."
             exit 0
           fi
 
@@ -44,9 +53,7 @@ jobs:
             exit 0
           fi
 
-          new_pkg_version=$(jq -r '.version' package.json)
           old_pkg_version=$(git show HEAD^:package.json 2>/dev/null | jq -r '.version' 2>/dev/null || "")
-          new_tauri_version=$(jq -r '.version' src-tauri/tauri.conf.json)
           old_tauri_version=$(git show HEAD^:src-tauri/tauri.conf.json 2>/dev/null | jq -r '.version' 2>/dev/null || "")
 
           pkg_bumped=$([[ "$new_pkg_version" != "$old_pkg_version" ]] && echo true || echo false)
@@ -122,10 +129,13 @@ jobs:
         id: release_tag
         shell: bash
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ needs.determine-version.outputs.release_version }}" ]]; then
             echo "value=v${{ needs.determine-version.outputs.release_version }}" >> "$GITHUB_OUTPUT"
           else
-            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "Unable to determine release tag." >&2
+            exit 1
           fi
 
       - name: Install Linux dependencies
