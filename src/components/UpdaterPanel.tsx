@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
 
 const RELEASES_ENDPOINT = "https://api.github.com/repos/EvilNick2/vencord-installer-gui/releases?per_page=20"
@@ -271,6 +272,21 @@ export default function UpdaterPanel() {
     });
   }, [releaseHistory, currentVersion]);
 
+  const openReleasePage = async (url: string | undefined) => {
+    if (!url) return;
+
+    try {
+      await openUrl(url);
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        setStatusMessage("Could not open browser automatically. Release URL copied to clipboard.");
+      } catch (copyErr) {
+        setError(String(copyErr));
+      }
+    }
+  };
+
   const disableCheck = status === "checking" || status === "downloading" || supportsUpdater !== true;
   const disableInstall =
     supportsUpdater !== true ||
@@ -345,9 +361,9 @@ export default function UpdaterPanel() {
                       <div className="muted small">No changelog provided for this release.</div>
                     )}
                     {release.url ? (
-                      <a href={release.url} target="_blank" rel="noreferrer" className="small">
+                      <button className="ghost small" onClick={() => void openReleasePage(release.url)}>
                         Open release page
-                      </a>
+                      </button>
                     ) : null}
                   </li>
                 ))}
