@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::ErrorKind;
-use std::process::Command;
 use tauri::async_runtime::spawn_blocking;
 use tauri::Emitter;
+
+use crate::command_utils::{build_command, command_candidates};
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,36 +58,6 @@ static DEPENDENCIES: Lazy<Vec<DependencySpec>> = Lazy::new(|| {
   serde_json::from_str(include_str!("dependencies.json"))
     .expect("Failed to parse dependencies.json")
 });
-
-#[cfg(windows)]
-fn command_candidates(command: &str) -> [String; 3] {
-  [
-    format!("{command}.cmd"),
-    format!("{command}.exe"),
-    command.to_string(),
-  ]
-}
-
-#[cfg(not(windows))]
-fn command_candidates(command: &str) -> [String; 1] {
-  [command.to_string()]
-}
-
-#[cfg(windows)]
-fn build_command(command: &str) -> Command {
-  use std::os::windows::process::CommandExt;
-
-  const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-
-  let mut cmd = Command::new(command);
-  cmd.creation_flags(CREATE_NO_WINDOW);
-  cmd
-}
-
-#[cfg(not(windows))]
-fn build_command(command: &str) -> Command {
-  Command::new(command)
-}
 
 fn current_platform_key() -> &'static str {
   if cfg!(target_os = "windows") {

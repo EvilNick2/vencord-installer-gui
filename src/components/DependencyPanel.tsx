@@ -25,10 +25,18 @@ export default function DependencyPanel() {
   const [error, setError] = useState<string | null>(null);
   const [installing, setInstalling] = useState<InstallState>({});
 
-  const orderedDependencies = useMemo(
-    () => Object.values(dependencies),
-    [dependencies]
-  );
+  const orderedDependencies = useMemo(() => {
+    const node = dependencies.node;
+    const isNodeDetected = node?.status === "installed" || node?.status === "outdated";
+
+    return Object.values(dependencies).filter((dependency) => {
+      if (isNodeDetected) {
+        return true;
+      }
+
+      return dependency.id !== "npm" && dependency.id !== "pnpm";
+    });
+  }, [dependencies]);
 
   const refresh = async () => {
     setLoading(true);
@@ -52,6 +60,10 @@ export default function DependencyPanel() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  const hasActiveInstall = Object.values(installing).some(Boolean);
+  const activeInstallId = Object.entries(installing).find(([, isInstalling]) => isInstalling)?.[0] ?? null;
+  const activeInstallName = activeInstallId ? dependencies[activeInstallId]?.name ?? activeInstallId : null;
 
   const handleInstall = async (id: string) => {
     setInstalling((prev) => ({ ...prev, [id]: true }));
@@ -101,10 +113,20 @@ export default function DependencyPanel() {
               <div className={STATUS_CLASS[dep.status]}>{STATUS_LABELS[dep.status]}</div>
             </div>
             <div className="dependency-actions">
-              <button onClick={() => void handleInstall(dep.id)} disabled={!dep.canInstall || installing[dep.id]}>
+              <button
+                onClick={() => void handleInstall(dep.id)}
+                disabled={hasActiveInstall || !dep.canInstall || installing[dep.id]}
+                title={
+                  hasActiveInstall && !installing[dep.id]
+                    ? `Only one dependency can be installed at a time. ${activeInstallName ?? "Another dependency"} is currently installing`
+                    : undefined
+                }
+              >
                 {installing[dep.id]
                   ? "Working..."
-                  : dep.installLabel ?? (dep.status === "outdated" ? "Upgrade" : "Install")}
+                  : hasActiveInstall && !installing[dep.id]
+                    ? `Wait for ${activeInstallName ?? "current dependency"}`
+                    : dep.installLabel ?? (dep.status === "outdated" ? "Upgrade" : "Install")}
               </button>
             </div>
           </div>
