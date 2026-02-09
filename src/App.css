@@ -587,6 +587,15 @@ h2 {
   align-items: center;
 }
 
+.workflow-actions {
+  flex-shrink: 0;
+}
+
+.workflow-actions .status-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .install-section button,
 .inline-actions button {
   padding: 8px 12px;

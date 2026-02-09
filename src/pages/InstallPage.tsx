@@ -331,14 +331,6 @@ export default function InstallPage() {
             your client.
           </p>
         </div>
-        <div className="inline-actions">
-          <button className="ghost" onClick={refreshOpenClients} disabled={processLoading}>
-            {processLoading ? "Refreshing clients..." : "Refresh running clients"}
-          </button>
-          <button className="primary" onClick={runWorkflow} disabled={isRunning || selectedIds.length === 0}>
-            {isRunning ? "Running installer..." : "Run full install"}
-          </button>
-        </div>
       </div>
 
       <div className="install-grid">
@@ -414,10 +406,19 @@ export default function InstallPage() {
             <div className="card-header">
               <div>
                 <h3>Full install workflow</h3>
-                <p className="muted small">Each step runs in order for the selected Discord client(s).</p>
+                <p className="muted small" style={{margin: "4px 0 10px 0"}}>Each step runs in order for the selected Discord client(s).</p>
               </div>
-              <div className={`status-pill ${isRunning ? "status-pending" : "status-ready"}`}>
-                {isRunning ? "Running" : "Standing by"}
+              <div className="inline-actions workflow-actions">
+                <div className={`status-pill ${isRunning ? "status-pending" : "status-ready"}`}>
+                  {isRunning ? "Running" : "Standing by"}
+                </div>
+                <button
+                  className="primary"
+                  onClick={runWorkflow}
+                  disabled={isRunning || selectedIds.length === 0}
+                >
+                  {isRunning ? "Running installer..." : "Run full install"}
+                </button>
               </div>
             </div>
 
