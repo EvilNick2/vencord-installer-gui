@@ -11,6 +11,13 @@ TAURI_CONF = REPO_ROOT / "src-tauri" / "tauri.conf.json"
 CARGO_TOML = REPO_ROOT / "src-tauri" / "Cargo.toml"
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 
+def get_current_version() -> str:
+    data = json.loads(PACKAGE_JSON.read_text())
+    version = data.get("version")
+    if not isinstance(version, str) or not version.strip():
+        raise SystemExit(f"Could not determine current version from {PACKAGE_JSON}")
+    return version
+
 def prompt(message: str) -> str:
     value = input(message).strip()
     if not value:
@@ -80,7 +87,8 @@ def update_release_body(path: Path, body: str) -> None:
 
 def main() -> None:
     print("Local version bump utility\n")
-    version = prompt("Enter the new version (e.g. 1.2.3): ")
+    current_version = get_current_version()
+    version = prompt(f"Enter the new version [{current_version}] (e.g. 1.2.3): ")
     release_body = prompt("Enter the release notes/description: ")
 
     update_json_version(PACKAGE_JSON, version)
