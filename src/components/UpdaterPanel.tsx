@@ -326,13 +326,6 @@ export default function UpdaterPanel() {
 
       {update && status === "available" ? (
         <div className="update-details">
-          <div>
-            <div className="meta-label">Available version</div>
-            <div className="meta-value">{update.version}</div>
-            {update.date ? (
-              <div className="muted">Released {new Intl.DateTimeFormat().format(new Date(update.date))}</div>
-            ) : null}
-          </div>
           <div className="update-notes update-notes--history">
             <div className="meta-label">Release notes for newer versions</div>
 
@@ -345,10 +338,13 @@ export default function UpdaterPanel() {
 
             {!releaseLoading && !releaseError && newerReleaseHistory.length > 0 ? (
               <ul className="release-history-list">
-                {newerReleaseHistory.map((release) => (
+                {newerReleaseHistory.map((release, index) => (
                   <li key={release.id} className="release-history-item">
                     <div className="release-history-item__header">
-                      <strong>{release.version}</strong>
+                      <div className="release-history-item__version-row">
+                        <strong>{release.version}</strong>
+                        {index === 0 ? <span className="status-pill status-ready">Latest</span> : null}
+                      </div>
                       {release.date ? (
                         <span className="muted small">
                           {new Intl.DateTimeFormat().format(new Date(release.date))}

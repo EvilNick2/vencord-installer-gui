@@ -1069,6 +1069,12 @@ small,
   align-items: baseline;
 }
 
+.release-history-item__version-row {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .release-history-item__notes {
   white-space: pre-line;
   font-size: 13px;
