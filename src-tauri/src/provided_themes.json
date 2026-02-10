@@ -2,14 +2,14 @@
   {
     "id": "fluent-in-memories",
     "name": "Fluent In Memories",
-    "url": "https://raw.githubusercontent.com/EvilNick2/vencord/refs/heads/main/themes/Fluent-In-Memories.theme.css",
+    "url": "https://github.com/EvilNick2/Fluent-Discord/releases/latest/download/Fluent-In-Memories.theme.css",
     "description": "Fluent theme by TakosThings modified by EvilNick to change certain elements and add a background",
     "defaultEnabled": true
   },
   {
     "id": "fluent-in-guts",
     "name": "Fluent In Guts",
-    "url": "https://raw.githubusercontent.com/EvilNick2/vencord/refs/heads/main/themes/Fluent-In-Guts.theme.css",
+    "url": "https://github.com/EvilNick2/Fluent-Discord/releases/latest/download/Fluent-In-Guts.theme.css",
     "description": "Fluent theme by TakosThings modified by EvilNick to change certain elements and add a background",
     "defaultEnabled": true
   }
