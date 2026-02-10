@@ -160,7 +160,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "Add release notes for all version higher than current and add responsiveness to navigation dock"
+          releaseBody: "Update URLs for provided themes to point to new repo"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
