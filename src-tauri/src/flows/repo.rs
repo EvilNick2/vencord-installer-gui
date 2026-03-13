@@ -10,7 +10,7 @@ fn run_command(
   args: &[&str],
   working_dir: Option<&str>,
   error_prefix: &str,
-) -> Result<(), String> {
+) -> Result<(String, String), String> {
   let mut last_error: Option<String> = None;
 
   for candidate in command_candidates(command) {
@@ -23,7 +23,10 @@ fn run_command(
     match cmd.args(args).output() {
       Ok(output) => {
         if output.status.success() {
-          return Ok(());
+          return Ok((
+            String::from_utf8_lossy(&output.stdout).trim().to_string(),
+            String::from_utf8_lossy(&output.stderr).trim().to_string(),
+          ));
         }
 
         return Err(format!(
@@ -46,6 +49,26 @@ fn run_command(
   ))
 }
 
+fn output_indicates_inject_failure(stdout: &str, stderr: &str) -> bool {
+  let haystack = format!(
+    "{}
+{}",
+    stdout.to_lowercase(),
+    stderr.to_lowercase()
+  );
+
+  [
+    "❌ failed",
+    "failed!",
+    "error ",
+    "error:",
+    "not a valid discord install",
+    "something went wrong",
+  ]
+  .iter()
+  .any(|needle| haystack.contains(needle))
+}
+
 fn check_tool(command: &str, args: &[&str], name: &str) -> Result<(), String> {
   run_command(
     command,
@@ -53,6 +76,7 @@ fn check_tool(command: &str, args: &[&str], name: &str) -> Result<(), String> {
     None,
     &format!("{name} is not installed or not in PATH"),
   )
+  .map(|_| ())
 }
 
 fn vencord_repo_path(dir: &str) -> PathBuf {
@@ -247,18 +271,48 @@ pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<Strin
   }
 
   check_tool("pnpm", &["--version"], "pnpm")?;
+  let mut per_location_details = Vec::new();
 
   for location in locations {
-    run_command(
+    let (stdout, stderr) = run_command(
       "pnpm",
       &["inject", "-location", location],
       Some(repo_dir),
       &format!("Failed to inject Vencord into {location} with pnpm"),
     )?;
+
+    if output_indicates_inject_failure(&stdout, &stderr) {
+      return Err(format!(
+        "Injection command reported failure for {location}. Stdout: {}\n Stderr: {}",
+        if stdout.is_empty() {
+          "<empty>"
+        } else {
+          &stdout
+        },
+        if stderr.is_empty() {
+          "<empty>"
+        } else {
+          &stderr
+        }
+      ));
+    }
+
+    let mut detail_lines = vec![format!("- location: {location}")];
+
+    if !stdout.is_empty() {
+      detail_lines.push(format!("  stdout: {stdout}"))
+    }
+
+    if !stderr.is_empty() {
+      detail_lines.push(format!("  stderr: {stderr}"))
+    }
+
+    per_location_details.push(detail_lines.join("\n"))
   }
 
   Ok(format!(
-    "Injected Vencord into {} Discord client(s)",
-    locations.len()
+    "Injected Vencord into {} Discord client(s)\n{}",
+    locations.len(),
+    per_location_details.join("\n")
   ))
 }
