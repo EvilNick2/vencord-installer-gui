@@ -69,6 +69,42 @@ fn output_indicates_inject_failure(stdout: &str, stderr: &str) -> bool {
   .any(|needle| haystack.contains(needle))
 }
 
+fn ensure_inject_location_writable(location: &str) -> Result<(), String> {
+  #[cfg(target_os = "linux")]
+  {
+    let resources_dir = Path::new(location).join("resources");
+
+    if !resources_dir.exists() {
+      return Ok(());
+    }
+
+    let probe = resources_dir.join(".vencord_installer_write_test");
+
+    match fs::OpenOptions::new()
+      .create(true)
+      .truncate(true)
+      .write(true)
+      .open(&probe)
+    {
+      Ok(_) => {
+        let _ = fs::remove_file(&probe);
+        Ok(())
+      }
+      Err(err) => Err(format!(
+        "Cannot write to {} ({}). Vencord injection needs write access to Discord's resources directory. Try running Discord from a user-writable install location or adjust ownership/permissions (for example with chown/chmod) before retrying",
+        resources_dir.display(),
+        err
+      )),
+    }
+  }
+
+  #[cfg(not(target_os = "linux"))]
+  {
+    let _ = location;
+    Ok(())
+  }
+}
+
 fn check_tool(command: &str, args: &[&str], name: &str) -> Result<(), String> {
   run_command(
     command,
@@ -274,6 +310,8 @@ pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<Strin
   let mut per_location_details = Vec::new();
 
   for location in locations {
+    ensure_inject_location_writable(location)?;
+
     let (stdout, stderr) = run_command(
       "pnpm",
       &["inject", "-location", location],
