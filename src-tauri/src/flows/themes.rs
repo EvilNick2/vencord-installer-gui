@@ -1,6 +1,6 @@
 use reqwest::blocking::get;
 use std::{
-  env, fs, io,
+  fs, io,
   path::{Path, PathBuf},
 };
 
@@ -9,6 +9,8 @@ use crate::options::ProvidedThemeInfo;
 pub fn theme_dir() -> Result<PathBuf, String> {
   #[cfg(target_os = "windows")]
   {
+    use std::env;
+
     if let Ok(appdata) = env::var("APPDATA") {
       return Ok(Path::new(&appdata).join("Vencord").join("themes"));
     }
