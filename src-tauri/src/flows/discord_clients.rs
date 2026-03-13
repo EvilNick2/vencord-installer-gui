@@ -223,11 +223,7 @@ fn restart_process(proc: &DiscordProcess) -> Result<String, String> {
   #[cfg(unix)]
   {
     use std::os::unix::process::CommandExt;
-
-    command.before_exec(|| unsafe {
-      libc::setsid();
-      Ok(())
-    });
+    unsafe { command.pre_exec(|| { libc::setsid(); Ok(()) }); }
   }
 
   #[cfg(windows)]
