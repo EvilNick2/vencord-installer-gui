@@ -10,7 +10,7 @@ pub struct DiscordInstall {
 
 fn resolve_candidate_path(path: &Path) -> Option<PathBuf> {
   if path.exists() && path.is_dir() {
-    return std::fs::canonicalize(path)
+    return dunce::canonicalize(path)
       .ok()
       .or_else(|| Some(path.to_path_buf()));
   }
@@ -19,7 +19,7 @@ fn resolve_candidate_path(path: &Path) -> Option<PathBuf> {
 
   for nested in nested_candidates {
     if nested.exists() && nested.is_dir() {
-      return std::fs::canonicalize(&nested)
+      return dunce::canonicalize(&nested)
         .ok()
         .or_else(|| Some(nested.to_path_buf()));
     }
