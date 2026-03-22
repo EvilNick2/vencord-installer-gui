@@ -28,6 +28,7 @@ pub fn build_command(command: &str) -> Command {
 
   let mut cmd = Command::new(command);
   cmd.creation_flags(CREATE_NO_WINDOW);
+  cmd.env("npm_config_manage_package_manager_versions", "false");
 
   if let Some(path) = refreshed_windows_path() {
     cmd.env("PATH", path);
@@ -38,7 +39,9 @@ pub fn build_command(command: &str) -> Command {
 
 #[cfg(not(windows))]
 pub fn build_command(command: &str) -> Command {
-  Command::new(command)
+  let mut cmd = Command::new(command);
+  cmd.env("npm_config_manage_package_manager_versions", "false");
+  cmd
 }
 
 #[cfg(windows)]
