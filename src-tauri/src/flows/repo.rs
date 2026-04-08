@@ -277,12 +277,14 @@ pub fn build_vencord_repo(repo_dir: &str) -> Result<String, String> {
 
   clean_node_modules(repo_path)?;
 
-  run_command(
-    "npm",
-    &["install", "-g", "pnpm"],
-    None,
-    "Failed to install pnpm via npm",
-  )?;
+  if check_tool("pnpm", &["--version"], "pnpm").is_err() {
+    run_command(
+      "npm",
+      &["install", "-g", "pnpm"],
+      None,
+      "Failed to install pnpm via npm",
+    )?;
+  }
 
   run_command(
     "pnpm",
