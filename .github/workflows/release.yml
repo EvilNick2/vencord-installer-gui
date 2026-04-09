@@ -167,9 +167,10 @@ jobs:
 
   publish-aur:
     name: Publish to AUR
+    needs: build-and-release
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: 'v1.2.62'
+      RELEASE_TAG: ${{ needs.build-and-release.outputs.release_tag || 'v1.2.62' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -181,11 +182,11 @@ jobs:
           sed -i "s/^pkgrel=.*/pkgrel=1/" aur/PKGBUILD
           URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Vencord.Installer.GUI_${VERSION}_amd64.deb"
           SHA=$(curl -sL "$URL" | sha256sum | awk '{print $1}')
-          sed -i "/^sha256sums=/,/)/{ /^sha256sums=/s/.*/sha256sums=('$SHA' 'SKIP')/; /^sha256sums=/!{ /)/d } }" aur/PKGBUILD
+          sed -i "s|^sha256sums=.*|sha256sums=('$SHA' 'SKIP')|" aur/PKGBUILD
 
       - name: Publish AUR package
         if: env.ACT != 'true'
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.0
         with:
           pkgname: vencord-installer-gui-bin
           pkgbuild: ./aur/PKGBUILD
