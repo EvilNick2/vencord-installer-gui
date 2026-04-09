@@ -167,31 +167,40 @@ jobs:
 
   publish-aur:
     name: Publish to AUR
-    needs: build-and-release
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: 'v1.2.62'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Update pkgver in PKGBUILD
         run: |
-          VERSION="${{ needs.build-and-release.outputs.release_tag }}"
-          VERSION="${VERSION#v}"
+          VERSION="${RELEASE_TAG#v}"
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" aur/PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" aur/PKGBUILD
-
+          URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Vencord.Installer.GUI_${VERSION}_amd64.deb"
+          SHA=$(curl -sL "$URL" | sha256sum | awk '{print $1}')
+          sed -i "/^sha256sums=/,/)/{ /^sha256sums=/s/.*/sha256sums=('$SHA' 'SKIP')/; /^sha256sums=/!{ /)/d } }" aur/PKGBUILD
 
       - name: Publish AUR package
-        uses: KSXGitHub/github-actions-deploy-aur@v3.0.0
+        if: env.ACT != 'true'
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
         with:
-          pkgname: ${{ github.event.repository.name }}-bin
+          pkgname: vencord-installer-gui-bin
           pkgbuild: ./aur/PKGBUILD
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: Update to ${{ needs.build-and-release.outputs.release_tag }}
-          updpkgsums: true
+          commit_message: Update to ${{ env.RELEASE_TAG }}
+          updpkgsums: false
 
+      - name: Print PKGBUILD (local test only)
+        if: env.ACT == 'true'
+        run: |
+          echo "=== Skipping AUR push (running in act) ==="
+          echo "=== Final PKGBUILD contents ==="
+          cat aur/PKGBUILD
 
   publish-updates:
     name: Publish updater manifest
