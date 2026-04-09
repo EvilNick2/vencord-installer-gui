@@ -199,7 +199,7 @@ jobs:
           git clone ssh://aur@aur.archlinux.org/vencord-installer-gui-bin.git /tmp/aur-pkg
           cp aur/PKGBUILD /tmp/aur-pkg/PKGBUILD
           docker run --rm -v /tmp/aur-pkg:/pkg archlinux:latest \
-            bash -c "pacman -Sy --noconfirm pacman-contrib && cd /pkg && makepkg --printsrcinfo > .SRCINFO"
+            bash -c "pacman -Sy --noconfirm pacman-contrib && useradd builder && chown -R builder /pkg && runuser -u builder -- bash -c 'cd /pkg && makepkg --printsrcinfo > .SRCINFO'"
           cd /tmp/aur-pkg
           git config user.name "${{ secrets.AUR_USERNAME }}"
           git config user.email "${{ secrets.AUR_EMAIL }}"
