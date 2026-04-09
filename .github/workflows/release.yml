@@ -205,12 +205,15 @@ jobs:
               su builder -c 'cd /pkg && makepkg --printsrcinfo > .SRCINFO'
             "
 
-          git clone ssh://aur@aur.archlinux.org/vencord-installer-gui-bin.git /tmp/aur-repo
+          git clone \
+            -c core.sshCommand="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no" \
+            ssh://aur@aur.archlinux.org/vencord-installer-gui-bin.git /tmp/aur-repo
           cp /tmp/aur-pkg/PKGBUILD /tmp/aur-repo/PKGBUILD
           cp /tmp/aur-pkg/.SRCINFO /tmp/aur-repo/.SRCINFO
           cd /tmp/aur-repo
           git config user.name "${{ secrets.AUR_USERNAME }}"
           git config user.email "${{ secrets.AUR_EMAIL }}"
+          git config core.sshCommand "ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no"
           git add PKGBUILD .SRCINFO
           git diff-index --quiet HEAD || git commit -m "Update to ${{ env.RELEASE_TAG }}"
           git push
