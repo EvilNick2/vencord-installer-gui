@@ -186,15 +186,26 @@ jobs:
 
       - name: Publish AUR package
         if: env.ACT != 'true'
-        uses: KSXGitHub/github-actions-deploy-aur@v3.0.0
-        with:
-          pkgname: vencord-installer-gui-bin
-          pkgbuild: ./aur/PKGBUILD
-          commit_username: ${{ secrets.AUR_USERNAME }}
-          commit_email: ${{ secrets.AUR_EMAIL }}
-          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: Update to ${{ env.RELEASE_TAG }}
-          updpkgsums: false
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan -t rsa,ecdsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+          EOF
+          git clone ssh://aur@aur.archlinux.org/vencord-installer-gui-bin.git /tmp/aur-pkg
+          cp aur/PKGBUILD /tmp/aur-pkg/PKGBUILD
+          docker run --rm -v /tmp/aur-pkg:/pkg archlinux:latest \
+            bash -c "pacman -Sy --noconfirm pacman-contrib && cd /pkg && makepkg --printsrcinfo > .SRCINFO"
+          cd /tmp/aur-pkg
+          git config user.name "${{ secrets.AUR_USERNAME }}"
+          git config user.email "${{ secrets.AUR_EMAIL }}"
+          git add PKGBUILD .SRCINFO
+          git diff-index --quiet HEAD || git commit -m "Update to ${{ env.RELEASE_TAG }}"
+          git push
 
       - name: Print PKGBUILD (local test only)
         if: env.ACT == 'true'
