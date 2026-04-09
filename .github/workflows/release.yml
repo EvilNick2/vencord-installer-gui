@@ -184,23 +184,31 @@ jobs:
           SHA=$(curl -sL "$URL" | sha256sum | awk '{print $1}')
           sed -i "s|^sha256sums=.*|sha256sums=('$SHA' 'SKIP')|" aur/PKGBUILD
 
-      - name: Publish AUR package
+      - name: Publish to AUR
         if: env.ACT != 'true'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
           ssh-keyscan -t rsa,ecdsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
-          cat >> ~/.ssh/config <<EOF
-          Host aur.archlinux.org
-            IdentityFile ~/.ssh/aur
-            User aur
-          EOF
-          git clone ssh://aur@aur.archlinux.org/vencord-installer-gui-bin.git /tmp/aur-pkg
+
+          mkdir -p /tmp/aur-pkg
           cp aur/PKGBUILD /tmp/aur-pkg/PKGBUILD
-          docker run --rm -v /tmp/aur-pkg:/pkg archlinux:latest \
-            bash -c "pacman -Sy --noconfirm pacman-contrib && useradd builder && chown -R builder /pkg && runuser -u builder -- bash -c 'cd /pkg && makepkg --printsrcinfo > .SRCINFO'"
-          cd /tmp/aur-pkg
+
+          docker run --rm \
+            -v /tmp/aur-pkg:/pkg \
+            archlinux:latest \
+            bash -c "
+              pacman -Sy --noconfirm pacman-contrib &&
+              useradd builder &&
+              chown -R builder:builder /pkg &&
+              su builder -c 'cd /pkg && makepkg --printsrcinfo > .SRCINFO'
+            "
+
+          git clone ssh://aur@aur.archlinux.org/vencord-installer-gui-bin.git /tmp/aur-repo
+          cp /tmp/aur-pkg/PKGBUILD /tmp/aur-repo/PKGBUILD
+          cp /tmp/aur-pkg/.SRCINFO /tmp/aur-repo/.SRCINFO
+          cd /tmp/aur-repo
           git config user.name "${{ secrets.AUR_USERNAME }}"
           git config user.email "${{ secrets.AUR_EMAIL }}"
           git add PKGBUILD .SRCINFO
