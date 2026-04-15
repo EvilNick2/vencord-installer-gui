@@ -160,6 +160,82 @@ fn run_command(command: &str, args: &[String]) -> Result<String, String> {
   Err(last_error.unwrap_or_else(|| "Command not found".to_string()))
 }
 
+#[cfg(not(windows))]
+fn shell_escape(arg: &str) -> String {
+  format!("'{}'", arg.replace('\'', "'\"'\"'"))
+}
+
+#[cfg(not(windows))]
+fn detect_with_nvm(spec: &DependencySpec) -> Result<Option<String>, String> {
+  if !matches!(spec.command.as_str(), "node" | "npm" | "pnpm") {
+    return Ok(None);
+  }
+
+  let command_with_args = std::iter::once(spec.command.as_str())
+      .chain(spec.args.iter().map(String::as_str))
+      .map(shell_escape)
+      .collect::<Vec<_>>()
+      .join(" ");
+
+  let script = format!(
+    "export NVM_DIR=\"${{NVM_DIR:-$HOME/.nvm}}\"
+if [ -s \"$NVM_DIR/nvm.sh\" ]; then
+  . \"$NVM_DIR/nvm.sh\"
+fi
+if ! command -v {command} >/dev/null 2>&1; then
+  exit 127
+fi
+{command_with_args}",
+    command = shell_escape(&spec.command),
+    command_with_args = command_with_args
+  );
+
+  let mut last_error: Option<String> = None;
+
+  for shell in ["bash", "zsh", "sh"] {
+    match build_command(shell).arg("-lc").arg(&script).output() {
+      Ok(output) => {
+        if output.status.success() {
+          let stdout = String::from_utf8_lossy(&output.stdout);
+          return Ok(extract_version(&stdout));
+        }
+
+        if output.status.code() == Some(127) {
+          continue;
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        last_error = Some(format!(
+          "{shell} -lc exited with status {}. Stderr: {stderr}",
+          output.status
+        ));
+      }
+      Err(err) => {
+        if err.kind() == ErrorKind::NotFound {
+          continue;
+        }
+
+        last_error = Some(format!("{shell}: {err}"));
+      }
+    }
+  }
+
+  if last_error.is_some() {
+    Err(last_error.unwrap())
+  } else {
+    #[cfg(not(windows))]
+    {
+      return detect_with_nvm(spec);
+    }
+
+    #[cfg(windows)]
+    {
+      Ok(None)
+    }
+  }
+}
+
+
 fn detect_installed_version(spec: &DependencySpec) -> Result<Option<String>, String> {
   let args: Vec<String> = spec.args.clone();
   let mut last_error: Option<String> = None;
