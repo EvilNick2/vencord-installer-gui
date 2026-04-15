@@ -223,18 +223,9 @@ fi
   if last_error.is_some() {
     Err(last_error.unwrap())
   } else {
-    #[cfg(not(windows))]
-    {
-      return detect_with_nvm(spec);
-    }
-
-    #[cfg(windows)]
-    {
-      Ok(None)
-    }
+    Ok(None)
   }
 }
-
 
 fn detect_installed_version(spec: &DependencySpec) -> Result<Option<String>, String> {
   let args: Vec<String> = spec.args.clone();
@@ -268,9 +259,18 @@ fn detect_installed_version(spec: &DependencySpec) -> Result<Option<String>, Str
   if last_error.is_some() {
     Err(last_error.unwrap())
   } else {
-    Ok(None)
+    #[cfg(not(windows))]
+    {
+      return detect_with_nvm(spec);
+    }
+
+    #[cfg(windows)]
+    {
+      Ok(None)
+    }
   }
 }
+
 
 fn build_status(spec: &DependencySpec) -> DependencyStatus {
   let install_cmd = resolve_install_command(spec);
