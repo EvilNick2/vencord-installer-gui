@@ -56,21 +56,10 @@ fn theme_file_name(theme: &ProvidedThemeInfo) -> Result<String, String> {
 }
 
 fn is_cross_device_link(err: &io::Error) -> bool {
-  match err.raw_os_error() {
-    Some(18) => true,
-    Some(17) => true,
-    _ => {
-      #[cfg(not(target_os = "windows"))]
-      {
-        return err.kind() == io::ErrorKind::CrossesDevices;
-      }
-
-      #[cfg(target_os = "windows")]
-      {
-        return false;
-      }
-    }
-  }
+  #[cfg(not(target_os = "windows"))]
+  { err.kind() == io::ErrorKind::CrossesDevices }
+  #[cfg(target_os = "windows")]
+  { err.raw_os_error() == Some(0x11) }
 }
 
 pub fn move_themes_to_backup(
