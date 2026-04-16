@@ -204,6 +204,31 @@ fn detect_discord_installs() -> Vec<DiscordInstall> {
       ];
 
       add_candidates(&mut installs, &config_candidates);
+
+      let flatpak_stable_base = home.join(".var/app/com.discordapp.Discord/config/discord");
+      let flatpak_ptb_base = home.join(".var/app/com.discordapp.DiscordPTB/config/discordptb");
+      let flatpak_canary_base =
+        home.join(".var/app/com.discordapp.DiscordCanary/config/discordcanary");
+
+      let flatpak_candidates = [
+        (
+          "stable",
+          "Discord Stable (Flatpak)",
+          latest_versioned_subdir(&flatpak_stable_base).unwrap_or(flatpak_stable_base),
+        ),
+        (
+          "ptb",
+          "Discord PTB (Flatpak)",
+          latest_versioned_subdir(&flatpak_ptb_base).unwrap_or(flatpak_ptb_base),
+        ),
+        (
+          "canary",
+          "Discord Canary (Flatpak)",
+          latest_versioned_subdir(&flatpak_canary_base).unwrap_or(flatpak_canary_base),
+        ),
+      ];
+
+      add_candidates(&mut installs, &flatpak_candidates);
     }
   }
 
