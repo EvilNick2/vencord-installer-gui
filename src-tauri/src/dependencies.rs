@@ -272,10 +272,9 @@ fi
     }
   }
 
-  if last_error.is_some() {
-    Err(last_error.unwrap())
-  } else {
-    Ok(None)
+  match last_error {
+    Some(err) => Err(err),
+    None => Ok(None),
   }
 }
 
@@ -308,17 +307,18 @@ fn detect_installed_version(spec: &DependencySpec) -> Result<Option<String>, Str
     }
   }
 
-  if last_error.is_some() {
-    Err(last_error.unwrap())
-  } else {
-    #[cfg(not(windows))]
-    {
-      return detect_with_nvm(spec);
-    }
+  match last_error {
+    Some(err) => Err(err),
+    None => {
+      #[cfg(not(windows))]
+      {
+        return detect_with_nvm(spec);
+      }
 
-    #[cfg(windows)]
-    {
-      Ok(None)
+      #[cfg(windows)]
+      {
+        Ok(None)
+      }
     }
   }
 }
