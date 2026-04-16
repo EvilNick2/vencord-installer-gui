@@ -346,16 +346,15 @@ pub fn backup_vencord_install(source_path: String) -> Result<BackupResult, Strin
 
   let discord_state = discord_clients::close_discord_clients(options.close_discord_on_backup);
 
-  let move_result = move_vencord_install(Path::new(&source_path), &theme_sources);
-
-  if let Err(err) = move_result {
-    if !discord_state.closing_skipped {
-      let _ = discord_clients::restart_processes(&discord_state.processes);
+  let backup_path = match move_vencord_install(Path::new(&source_path), &theme_sources) {
+    Ok(path) => path,
+    Err(err) => {
+      if !discord_state.closing_skipped {
+        let _ = discord_clients::restart_processes(&discord_state.processes);
+      }
+      return Err(err);
     }
-    return Err(err);
-  }
-
-  let backup_path = move_result?;
+  };
 
   apply_backup_limits(options.max_backup_count, options.max_backup_size_mb)?;
 
