@@ -17,9 +17,36 @@
         "displayLabel":"Install with Homebrew"
       },
       "linux": {
-        "command": "bash",
-        "args": ["-c", "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"],
-        "displayLabel":"Install with NodeSource"
+        "debian": {
+          "command": "bash",
+          "args": ["-c", "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"],
+          "displayLabel":"Install with NodeSource (Debian/Ubuntu)"
+        },
+        "fedora": {
+          "command": "sudo",
+          "args": ["dnf", "install", "-y", "nodejs", "npm"],
+          "displayLabel":"Install with dnf"
+        },
+        "arch": {
+          "command": "sudo",
+          "args": ["pacman", "-Sy", "--noconfirm", "nodejs", "npm"],
+          "displayLabel":"Install with pacman"
+        },
+        "suse": {
+          "command": "bash",
+          "args": ["-c", "sudo zypper --non-interactive install nodejs20 npm20 || sudo zypper --non-interactive install nodejs npm"],
+          "displayLabel":"Install with zypper"
+        },
+        "alpine": {
+          "command": "sudo",
+          "args": ["apk", "add", "--no-cache", "nodejs", "npm"],
+          "displayLabel":"Install with apk"
+        },
+        "default": {
+          "command": "bash",
+          "args": ["-c", "echo \"Unsupported Linux distribution. Please install Node.js 20+ manually.\" && exit 1"],
+          "displayLabel":"Manual install required"
+        }
       }
     }
   },
@@ -89,9 +116,36 @@
         "displayLabel": "Install with Homebrew"
       },
       "linux": {
-        "command": "bash",
-        "args": ["-c", "sudo apt-get update && sudo apt-get install -y git"],
-        "displayLabel": "Install with apt"
+        "debian": {
+          "command": "bash",
+          "args": ["-c", "sudo apt-get update && sudo apt-get install -y git"],
+          "displayLabel":"Install with apt"
+        },
+        "fedora": {
+          "command": "sudo",
+          "args": ["dnf", "install", "-y", "git"],
+          "displayLabel":"Install with dnf"
+        },
+        "arch": {
+          "command": "sudo",
+          "args": ["pacman", "-Sy", "--noconfirm", "git"],
+          "displayLabel":"Install with pacman"
+        },
+        "suse": {
+          "command": "sudo",
+          "args": ["zypper", "--non-interactive", "install", "git"],
+          "displayLabel":"Install with zypper"
+        },
+        "alpine": {
+          "command": "sudo",
+          "args": ["apk", "add", "--no-cache", "git"],
+          "displayLabel":"Install with apk"
+        },
+        "default": {
+          "command": "bash",
+          "args": ["-c", "echo \"Unsupported Linux distribution. Please install Git manually.\" && exit 1"],
+          "displayLabel":"Manual install required"
+        }
       }
     }
   }

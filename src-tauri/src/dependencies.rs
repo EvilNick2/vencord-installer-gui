@@ -19,6 +19,13 @@ struct InstallCommand {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum InstallCommandEntry {
+  Single(InstallCommand),
+  PerDistro(HashMap<String, InstallCommand>),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DependencySpec {
   id: String,
@@ -28,7 +35,7 @@ struct DependencySpec {
   args: Vec<String>,
   recommended_version: String,
   #[serde(default)]
-  install_commands: Option<HashMap<String, InstallCommand>>,
+  install_commands: Option<HashMap<String, InstallCommandEntry>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -93,12 +100,57 @@ fn extract_version(output: &str) -> Option<String> {
   None
 }
 
+#[cfg(target_os = "linux")]
+fn linux_distribution_keys() -> Vec<String> {
+  let content = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+  let mut keys: Vec<String> = Vec::new();
+  let mut push_unique = |value: String| {
+    if !keys.contains(&value) {
+      keys.push(value);
+    }
+  };
+
+  for line in content.lines() {
+    if let Some(value) = line.strip_prefix("ID=") {
+      push_unique(value.trim_matches('"').to_lowercase());
+    } else if let Some(value) = line.strip_prefix("ID_LIKE=") {
+      for segment in value.trim_matches('"').split_whitespace() {
+        push_unique(segment.to_lowercase());
+      }
+    }
+  }
+
+  push_unique("default".to_string());
+  keys
+}
+
 fn resolve_install_command(spec: &DependencySpec) -> Option<&InstallCommand> {
   let platform = current_platform_key();
-  spec
+  let entry = spec
     .install_commands
     .as_ref()
-    .and_then(|map| map.get(platform))
+    .and_then(|map| map.get(platform))?;
+
+  match entry {
+    InstallCommandEntry::Single(command) => Some(command),
+    InstallCommandEntry::PerDistro(commands) => {
+      #[cfg(target_os = "linux")]
+      {
+        for distro in linux_distribution_keys() {
+          if let Some(command) = commands.get(&distro) {
+            return Some(command);
+          }
+        }
+
+        None
+      }
+
+      #[cfg(not(target_os = "linux"))]
+      {
+        commands.get("default")
+      }
+    }
+  }
 }
 
 fn compare_versions(installed: &str, recommended: &str) -> Option<Ordering> {
