@@ -82,14 +82,16 @@ def save_env(data: dict) -> None:
 
 def parse_notes_file(path: Path) -> tuple[str, str]:
     content = path.read_text(encoding="utf-8").strip()
-    first_line = content.splitlines()[0] if content else ""
+    lines = content.splitlines()
+    first_line = lines[0] if lines else ""
     match = re.match(r"^#\s+v(\d+\.\d+\.\d+)", first_line)
     if not match:
         raise SystemExit(
             f"Could not parse version from {path}.\n"
             "The file must start with a heading like: # v1.2.3"
         )
-    return match.group(1), content
+    body = "\n".join(lines[1:]).strip()
+    return match.group(1), body
 
 def escape_for_yaml(value: str) -> str:
     return json.dumps(value)
