@@ -160,7 +160,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "# v1.3.0\n\n## What's New\n\n- **Flatpak Discord support**: Discord installed via Flatpak is now detected on Linux\n- **Distro-aware dependency installer**: The dependencies panel now detects your Linux distro and uses the correct package manager install commands\n- **Content Security Policy**: Added CSP to improve security of the app window\n- **Markdown release notes**: Updater panel now renders release notes as Markdown\n\n## Bug Fixes\n\n### Dependencies\n\n- Fixed infinite recursion when checking for installed tools\n- npm installs managed by nvm are now detected on Linux\n- Node.js recommended version and install commands pinned to Node 22 LTS\n- Corrected pnpm display label on macOS and Linux\n- Bump tauri-plugin-updater to 2.10.0 to match NPM package\n\n### Backup\n\n- Fixed false positive EEXIST error on cross-device link detection\n- Fixed double-consume of move result in backup function\n\n### Logging\n\n- Added missing `log:default` capability permission\n\n### Updater\n\n- Wrap ReactMarkdown in div for className - prop removed in v10"
+          releaseBody: "## Bug Fixes\n\n### Repo\n\n- Remove auto-install of pnpm via npm as this fails on system managed Node\n\n### Version Bump\n\n- Exclude version heading from releaseBody as version is already shown in updater card\n\n### Scripts\n\n- Use python3 instead of py in publish script as py is Windows only"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
