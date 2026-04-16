@@ -202,16 +202,17 @@ pub fn apply_backup_limits(max_count: Option<u32>, max_size_mb: Option<u64>) -> 
   }
 
   if let Some(max_mb) = max_size_mb {
-    let mut backups = collect_backups()?;
+    // Re-fetch after count pruning so sizes reflect the remaining backups.
+    let mut size_backups = collect_backups()?;
     let max_bytes = max_mb.saturating_mul(1024 * 1024);
-    let mut total: u64 = backups.iter().map(|entry| entry.size_bytes).sum();
+    let mut total: u64 = size_backups.iter().map(|entry| entry.size_bytes).sum();
 
     if total <= max_bytes {
       return Ok(());
     }
 
     while total > max_bytes {
-      if let Some(oldest) = backups.pop() {
+      if let Some(oldest) = size_backups.pop() {
         fs::remove_dir_all(&oldest.path)
           .map_err(|err| format!("Failed to remove backup {}: {err}", oldest.path.display()))?;
         total = total.saturating_sub(oldest.size_bytes);
