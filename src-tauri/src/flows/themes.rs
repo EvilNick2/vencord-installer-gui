@@ -142,6 +142,10 @@ pub fn move_themes_to_backup(
   }
 }
 
+// NOTE: Uses `reqwest::blocking::get` internally. Must always be called from a
+// blocking context - either a synchronous `#[tauri::command]` or inside
+// `tokio::task::spawn_blocking`. Do not call from an async context directly,
+// as it will block the async executor.
 pub fn download_themes(themes: &[ProvidedThemeInfo]) -> Result<String, String> {
   if themes.is_empty() {
     return Ok("No themes enabled; skipping download".to_string());
