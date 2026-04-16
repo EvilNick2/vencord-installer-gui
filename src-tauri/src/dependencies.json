@@ -89,12 +89,12 @@
       "macos": {
         "command": "npm",
         "args": ["install", "-g", "pnpm@{version}"],
-        "displayLabel": "Install npm globally"
+        "displayLabel": "Install pnpm globally"
       },
       "linux": {
         "command": "npm",
         "args": ["install", "-g", "pnpm@{version}"],
-        "displayLabel": "Install npm globally"
+        "displayLabel": "Install pnpm globally"
       }
     }
   },
