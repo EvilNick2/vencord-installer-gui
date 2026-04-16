@@ -223,6 +223,7 @@ fn restart_process(proc: &DiscordProcess) -> Result<String, String> {
   #[cfg(unix)]
   {
     use std::os::unix::process::CommandExt;
+    // Safety: setsid() is async-signal-safe and valid to call between fork and exec.
     unsafe { command.pre_exec(|| { libc::setsid(); Ok(()) }); }
   }
 
