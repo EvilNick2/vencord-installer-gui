@@ -13,7 +13,7 @@
     "start:local": "dotenv tauri dev -- --config updater-test/tauri.local.conf.json",
     "build": "dotenv tauri build",
     "build:local": "dotenv tauri build -- --config updater-test/tauri.local.conf.json",
-    "publish": "py scripts/version_bump.py"
+    "publish": "python3 scripts/version_bump.py"
   },
   "dependencies": {
     "@tauri-apps/api": "2.10.1",
