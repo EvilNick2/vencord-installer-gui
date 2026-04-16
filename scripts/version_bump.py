@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import json
 import re
+import shlex
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = Path(__file__).resolve().parent
+ENV_FILE = SCRIPTS_DIR / ".env"
 
 PACKAGE_JSON = REPO_ROOT / "package.json"
 PACKAGE_LOCK = REPO_ROOT / "package-lock.json"
@@ -61,6 +64,33 @@ def update_cargo_version(path: Path, version: str) -> None:
     path.write_text("\n".join(new_lines) + "\n")
     print(f"Updated {path.relative_to(REPO_ROOT)} version to {version}")
 
+def load_env() -> dict:
+    if not ENV_FILE.exists():
+        return {}
+    result = {}
+    for line in ENV_FILE.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, _, value = line.partition("=")
+            result[key.strip()] = value.strip()
+    return result
+
+def save_env(data: dict) -> None:
+    ENV_FILE.write_text(
+        "\n".join(f"{k}={v}" for k, v in data.items()) + "\n"
+    )
+
+def parse_notes_file(path: Path) -> tuple[str, str]:
+    content = path.read_text(encoding="utf-8").strip()
+    first_line = content.splitlines()[0] if content else ""
+    match = re.match(r"^#\s+v(\d+\.\d+\.\d+)", first_line)
+    if not match:
+        raise SystemExit(
+            f"Could not parse version from {path}.\n"
+            "The file must start with a heading like: # v1.2.3"
+        )
+    return match.group(1), content
+
 def escape_for_yaml(value: str) -> str:
     return json.dumps(value)
 
@@ -87,9 +117,30 @@ def update_release_body(path: Path, body: str) -> None:
 
 def main() -> None:
     print("Local version bump utility\n")
-    current_version = get_current_version()
-    version = prompt(f"Enter the new version [{current_version}] (e.g. 1.2.3): ")
-    release_body = prompt("Enter the release notes/description: ")
+
+    env = load_env()
+    notes_path_str = env.get("NOTES_PATH", "")
+
+    if not notes_path_str:
+        notes_path_str = prompt(
+            "Enter the path to your release notes Markdown file\n"
+            "(this will be saved to scripts/.env for future runs): "
+        )
+        env["NOTES_PATH"] = notes_path_str
+        save_env(env)
+        print(f"Saved notes path to {ENV_FILE.relative_to(REPO_ROOT)}")
+
+    try:
+        parts = shlex.split(notes_path_str)
+        notes_path_str = parts[0] if parts else notes_path_str
+    except ValueError:
+        pass
+    notes_path = Path(notes_path_str).expanduser()
+    if not notes_path.exists():
+        raise SystemExit(f"Release notes file not found: {notes_path}")
+
+    version, release_body = parse_notes_file(notes_path)
+    print(f"Read version {version} and release notes from {notes_path}")
 
     update_json_version(PACKAGE_JSON, version)
     update_json_version(PACKAGE_LOCK, version)
