@@ -353,7 +353,9 @@ export default function UpdaterPanel() {
                       ) : null}
                     </div>
                     {release.notes ? (
-                      <ReactMarkdown className="release-history-item__notes">{release.notes}</ReactMarkdown>
+                      <div className="release-history-item__notes">
+                        <ReactMarkdown>{release.notes}</ReactMarkdown>
+                      </div>
                     ) : (
                       <div className="muted small">No changelog provided for this release.</div>
                     )}
