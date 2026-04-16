@@ -1,7 +1,7 @@
 use log::warn;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, env, fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::config::app_config_dir;
 
@@ -10,10 +10,8 @@ fn default_true() -> bool {
 }
 
 fn default_repo_base_dir() -> String {
-  let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-  let home_dir = env::var(home_var).unwrap_or_else(|_| ".".to_string());
-
-  PathBuf::from(home_dir)
+  dirs::home_dir()
+    .unwrap_or_else(|| PathBuf::from("."))
     .join("Vencord")
     .to_string_lossy()
     .into_owned()
@@ -32,10 +30,8 @@ fn default_selected_discord_clients() -> Vec<String> {
 }
 
 fn legacy_repo_base_dir() -> String {
-  let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-  let home_dir = env::var(home_var).unwrap_or_else(|_| ".".to_string());
-
-  PathBuf::from(home_dir)
+  dirs::home_dir()
+    .unwrap_or_else(|| PathBuf::from("."))
     .join("Documents")
     .join("Vencord")
     .to_string_lossy()
