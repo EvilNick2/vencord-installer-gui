@@ -4,7 +4,7 @@
     "name": "Node.js",
     "command": "node",
     "args": ["--version"],
-    "recommendedVersion": "25.1.0",
+    "recommendedVersion": "22.14.0",
     "installCommands": {
       "windows": {
         "command": "powershell",
@@ -13,13 +13,13 @@
       },
       "macos": {
         "command": "brew",
-        "args": ["install", "node@20"],
+        "args": ["install", "node@22"],
         "displayLabel":"Install with Homebrew"
       },
       "linux": {
         "debian": {
           "command": "bash",
-          "args": ["-c", "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"],
+          "args": ["-c", "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs"],
           "displayLabel":"Install with NodeSource (Debian/Ubuntu)"
         },
         "fedora": {
@@ -34,7 +34,7 @@
         },
         "suse": {
           "command": "bash",
-          "args": ["-c", "sudo zypper --non-interactive install nodejs20 npm20 || sudo zypper --non-interactive install nodejs npm"],
+          "args": ["-c", "sudo zypper --non-interactive install nodejs22 npm22 || sudo zypper --non-interactive install nodejs npm"],
           "displayLabel":"Install with zypper"
         },
         "alpine": {
@@ -44,7 +44,7 @@
         },
         "default": {
           "command": "bash",
-          "args": ["-c", "echo \"Unsupported Linux distribution. Please install Node.js 20+ manually.\" && exit 1"],
+          "args": ["-c", "echo \"Unsupported Linux distribution. Please install Node.js 22+ manually.\" && exit 1"],
           "displayLabel":"Manual install required"
         }
       }
