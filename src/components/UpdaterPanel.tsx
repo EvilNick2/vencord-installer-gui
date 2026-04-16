@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { getVersion } from "@tauri-apps/api/app";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -352,7 +353,7 @@ export default function UpdaterPanel() {
                       ) : null}
                     </div>
                     {release.notes ? (
-                      <div className="release-history-item__notes">{release.notes}</div>
+                      <ReactMarkdown className="release-history-item__notes">{release.notes}</ReactMarkdown>
                     ) : (
                       <div className="muted small">No changelog provided for this release.</div>
                     )}
