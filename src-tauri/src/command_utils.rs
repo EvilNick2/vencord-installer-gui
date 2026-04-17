@@ -41,7 +41,41 @@ pub fn build_command(command: &str) -> Command {
 pub fn build_command(command: &str) -> Command {
   let mut cmd = Command::new(command);
   cmd.env("npm_config_manage_package_manager_versions", "false");
+
+  if let Some(path) = augmented_unix_path() {
+    cmd.env("PATH", path);
+  }
+
   cmd
+}
+
+#[cfg(not(windows))]
+fn augmented_unix_path() -> Option<String> {
+  let current = std::env::var("PATH").unwrap_or_default();
+  let home = std::env::var("HOME").unwrap_or_default();
+
+  let mut extras: Vec<String> = vec![
+    format!("{home}/.local/bin"),
+    format!("{home}/.local/share/pnpm"),
+    format!("{home}/.npm-global/bin"),
+    "/usr/local/bin".to_string(),
+  ];
+
+  if let Ok(pnpm_home) = std::env::var("PNPM_HOME") {
+    extras.push(pnpm_home);
+  }
+
+  let current_parts: Vec<&str> = current.split(':').collect();
+  let new_parts: Vec<String> = extras
+    .into_iter()
+    .filter(|p| !p.is_empty() && !current_parts.contains(&p.as_str()))
+    .collect();
+
+  if new_parts.is_empty() {
+    return None;
+  }
+
+  Some(format!("{}:{}", new_parts.join(":"), current))
 }
 
 #[cfg(windows)]
