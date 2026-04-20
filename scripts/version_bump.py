@@ -114,27 +114,16 @@ def git_commit(version: str) -> None:
         raise SystemExit("git commit failed.")
     print(f"Created commit: chore(release): bump version to {version}")
 
-NOTES_TEMPLATE = """\
-# v
-
-## What's New
-
--
-
-## Bug Fixes
-
-###
-
--
-"""
-
 def archive_and_reset_notes(path: Path, version: str) -> None:
     archive_dir = path.parent / "archive"
     archive_dir.mkdir(exist_ok=True)
     archive_path = archive_dir / f"v{version}.md"
     shutil.copy2(path, archive_path)
     print(f"Archived release notes to {archive_path}")
-    path.write_text(NOTES_TEMPLATE, encoding="utf-8")
+    template_path = path.parent / "Release Template.md"
+    if not template_path.exists():
+        raise SystemExit(f"Template file not found: {template_path}")
+    path.write_text(template_path.read_text(encoding="utf-8"), encoding="utf-8")
     print(f"Reset {path.name} to template")
 
 def escape_for_yaml(value: str) -> str:
@@ -193,11 +182,11 @@ def main() -> None:
     update_tauri_conf(TAURI_CONF, version)
     update_cargo_version(CARGO_TOML, version)
     update_release_body(RELEASE_WORKFLOW, release_body)
+    archive_and_reset_notes(notes_path, version)
 
     answer = input("\nCreate git commit? [y/N] ").strip().lower()
     if answer == "y":
         git_commit(version)
-        archive_and_reset_notes(notes_path, version)
     else:
         print("Skipped commit. Files updated but not committed.")
 
