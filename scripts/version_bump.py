@@ -114,6 +114,10 @@ def git_commit(version: str) -> None:
         raise SystemExit("git commit failed.")
     print(f"Created commit: chore(release): bump version to {version}")
 
+def next_patch(version: str) -> str:
+    major, minor, patch = version.split(".")
+    return f"{major}.{minor}.{int(patch) + 1}"
+
 def archive_and_reset_notes(path: Path, version: str) -> None:
     archive_dir = path.parent / "archive"
     archive_dir.mkdir(exist_ok=True)
@@ -123,8 +127,11 @@ def archive_and_reset_notes(path: Path, version: str) -> None:
     template_path = path.parent / "Release Template.md"
     if not template_path.exists():
         raise SystemExit(f"Template file not found: {template_path}")
-    path.write_text(template_path.read_text(encoding="utf-8"), encoding="utf-8")
-    print(f"Reset {path.name} to template")
+    template = template_path.read_text(encoding="utf-8")
+    upcoming = next_patch(version)
+    template = re.sub(r"^#\s+v\S*", f"# v{upcoming}", template, count=1, flags=re.MULTILINE)
+    path.write_text(template, encoding="utf-8")
+    print(f"Reset {path.name} to template with version v{upcoming}")
 
 def escape_for_yaml(value: str) -> str:
     return json.dumps(value)
