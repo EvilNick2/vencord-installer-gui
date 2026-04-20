@@ -160,7 +160,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "## Bug Fixes\n\n### Repo\n\n- Remove auto-install of pnpm via npm as this fails on system managed Node\n\n### Version Bump\n\n- Exclude version heading from releaseBody as version is already shown in updater card\n\n### Scripts\n\n- Use python3 instead of py in publish script as py is Windows only"
+          releaseBody: "## Bug Fixes\n\n### Command Utils\n\n- Augment PATH on Linux with common binary locations as desktop applications skip shell rc files"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
