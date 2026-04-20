@@ -2,6 +2,7 @@
 import json
 import re
 import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -113,6 +114,29 @@ def git_commit(version: str) -> None:
         raise SystemExit("git commit failed.")
     print(f"Created commit: chore(release): bump version to {version}")
 
+NOTES_TEMPLATE = """\
+# v
+
+## What's New
+
+-
+
+## Bug Fixes
+
+###
+
+-
+"""
+
+def archive_and_reset_notes(path: Path, version: str) -> None:
+    archive_dir = path.parent / "archive"
+    archive_dir.mkdir(exist_ok=True)
+    archive_path = archive_dir / f"v{version}.md"
+    shutil.copy2(path, archive_path)
+    print(f"Archived release notes to {archive_path}")
+    path.write_text(NOTES_TEMPLATE, encoding="utf-8")
+    print(f"Reset {path.name} to template")
+
 def escape_for_yaml(value: str) -> str:
     return json.dumps(value)
 
@@ -171,6 +195,7 @@ def main() -> None:
     update_release_body(RELEASE_WORKFLOW, release_body)
 
     git_commit(version)
+    archive_and_reset_notes(notes_path, version)
 
 
 if __name__ == "__main__":
