@@ -2,6 +2,7 @@
 import json
 import re
 import shlex
+import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -93,6 +94,25 @@ def parse_notes_file(path: Path) -> tuple[str, str]:
     body = "\n".join(lines[1:]).strip()
     return match.group(1), body
 
+def git_commit(version: str) -> None:
+    files = [
+        str(PACKAGE_JSON.relative_to(REPO_ROOT)),
+        str(PACKAGE_LOCK.relative_to(REPO_ROOT)),
+        str(TAURI_CONF.relative_to(REPO_ROOT)),
+        str(CARGO_TOML.relative_to(REPO_ROOT)),
+        str(RELEASE_WORKFLOW.relative_to(REPO_ROOT)),
+    ]
+    result = subprocess.run(["git", "add", "--"] + files, cwd=REPO_ROOT)
+    if result.returncode != 0:
+        raise SystemExit("git add failed.")
+    result = subprocess.run(
+        ["git", "commit", "-m", f"chore(release): bump version to {version}"],
+        cwd=REPO_ROOT,
+    )
+    if result.returncode != 0:
+        raise SystemExit("git commit failed.")
+    print(f"Created commit: chore(release): bump version to {version}")
+
 def escape_for_yaml(value: str) -> str:
     return json.dumps(value)
 
@@ -150,7 +170,7 @@ def main() -> None:
     update_cargo_version(CARGO_TOML, version)
     update_release_body(RELEASE_WORKFLOW, release_body)
 
-    print("\nAll files updated. Don't forget to review and commit your changes if desired.")
+    git_commit(version)
 
 
 if __name__ == "__main__":
