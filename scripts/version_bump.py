@@ -194,8 +194,12 @@ def main() -> None:
     update_cargo_version(CARGO_TOML, version)
     update_release_body(RELEASE_WORKFLOW, release_body)
 
-    git_commit(version)
-    archive_and_reset_notes(notes_path, version)
+    answer = input("\nCreate git commit? [y/N] ").strip().lower()
+    if answer == "y":
+        git_commit(version)
+        archive_and_reset_notes(notes_path, version)
+    else:
+        print("Skipped commit. Files updated but not committed.")
 
 
 if __name__ == "__main__":
