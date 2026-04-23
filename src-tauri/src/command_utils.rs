@@ -50,32 +50,87 @@ pub fn build_command(command: &str) -> Command {
 }
 
 #[cfg(not(windows))]
+fn shell_resolved_path() -> Option<String> {
+  use std::sync::OnceLock;
+  static CACHE: OnceLock<Option<String>> = OnceLock::new();
+
+  CACHE
+    .get_or_init(|| {
+      for shell in ["bash", "zsh", "sh"] {
+        if let Ok(output) = std::process::Command::new(shell)
+          .args(["-lc", "echo $PATH"])
+          .output()
+        {
+          if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout)
+              .trim()
+              .to_string();
+
+            if !path.is_empty() {
+              log::debug!(
+                "Resolved login-shell PATH via {shell}: {path}"
+              );
+              return Some(path);
+            }
+          }
+        }
+      }
+
+      log::debug!("Could not resolve PATH from any login shell; falling back to inherited PATH");
+      None
+    })
+    .clone()
+}
+
+#[cfg(not(windows))]
 fn augmented_unix_path() -> Option<String> {
-  let current = std::env::var("PATH").unwrap_or_default();
+  let inherited = std::env::var("PATH").unwrap_or_default();
+  let shell_path = shell_resolved_path().unwrap_or_default();
   let home = std::env::var("HOME").unwrap_or_default();
+
+  // Prefer the shell-resolved PATH as the base; fall back to the inherited
+  // process PATH when the login-shell spawn fails (e.g. no bash/zsh/sh).
+  let base = if !shell_path.is_empty() {
+    shell_path
+  } else {
+    inherited
+  };
 
   let mut extras: Vec<String> = vec![
     format!("{home}/.local/bin"),
     format!("{home}/.local/share/pnpm"),
     format!("{home}/.npm-global/bin"),
+    format!("{home}/.volta/bin"),
+    format!("{home}/.asdf/shims"),
+    format!("{home}/.local/share/mise/shims"),
     "/usr/local/bin".to_string(),
+    "/home/linuxbrew/.linuxbrew/bin".to_string(),
+    "/opt/homebrew/bin".to_string(),
   ];
 
   if let Ok(pnpm_home) = std::env::var("PNPM_HOME") {
-    extras.push(pnpm_home);
+    if !pnpm_home.is_empty() {
+      extras.push(pnpm_home);
+    }
   }
 
-  let current_parts: Vec<&str> = current.split(':').collect();
+  let base_parts: Vec<&str> = base.split(':').collect();
   let new_parts: Vec<String> = extras
     .into_iter()
-    .filter(|p| !p.is_empty() && !current_parts.contains(&p.as_str()))
+    .filter(|p| !p.is_empty() && !base_parts.contains(&p.as_str()))
     .collect();
 
-  if new_parts.is_empty() {
-    return None;
-  }
+  let full = if new_parts.is_empty() {
+    base
+  } else {
+    format!("{}:{}", new_parts.join(":"), base)
+  };
 
-  Some(format!("{}:{}", new_parts.join(":"), current))
+  if full.is_empty() {
+    None
+  } else {
+    Some(full)
+  }
 }
 
 #[cfg(windows)]
