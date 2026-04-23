@@ -160,7 +160,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "## Bug Fixes\n\n### Command Utils\n\n- Augment PATH on Linux with common binary locations as desktop applications skip shell rc files"
+          releaseBody: "## Bug Fixes\n\n### Command Utils\n\n- Resolve PATH via login shell for desktop launches"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
