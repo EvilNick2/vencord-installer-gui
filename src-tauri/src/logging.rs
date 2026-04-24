@@ -1,4 +1,4 @@
-use std::{fs, io, path::Path, path::PathBuf};
+use std::{fs, io::{self, Write}, path::Path, path::PathBuf};
 
 use chrono::Local;
 use log::LevelFilter;
@@ -13,17 +13,60 @@ pub fn installer_logs_dir() -> io::Result<PathBuf> {
 
   Ok(log_dir)
 }
+struct LazyFileWriter {
+  path: PathBuf,
+  file: Option<fs::File>,
+}
+
+impl LazyFileWriter {
+  fn new(path: PathBuf) -> Self {
+    Self { path, file: None }
+  }
+
+  fn get_or_create(&mut self) -> io::Result<&mut fs::File> {
+    if self.file.is_none() {
+      self.file = Some(
+        fs::OpenOptions::new()
+          .create(true)
+          .append(true)
+          .open(&self.path)?,
+      );
+    }
+
+    Ok(self.file.as_mut().unwrap())
+  }
+}
+
+impl Write for LazyFileWriter {
+  fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+    self.get_or_create()?.write(buf)
+  }
+
+  fn flush(&mut self) -> io::Result<()> {
+    if let Some(ref mut f) = self.file {
+      f.flush()
+    } else {
+      Ok(())
+    }
+  }
+}
 
 fn rotate_latest_log(log_dir: &Path) {
   let latest = log_dir.join("latest.log");
 
-  if !latest.exists() {
+  let meta = match fs::metadata(&latest) {
+    Ok(m) => m,
+    Err(_) => return,
+  };
+
+  if meta.len() == 0 {
+    let _ = fs::remove_file(&latest);
     return;
   }
 
-  let timestamp = fs::metadata(&latest)
+  let timestamp = meta
+    .modified()
     .ok()
-    .and_then(|m| m.modified().ok())
     .map(|mtime| {
       let dt: chrono::DateTime<Local> = mtime.into();
       dt.format("%Y-%m-%d_%H-%M-%S").to_string()
@@ -45,10 +88,21 @@ pub fn with_tauri_logger<R: Runtime>(builder: Builder<R>) -> Builder<R> {
   if let Some(ref path) = log_dir {
     rotate_latest_log(path);
 
-    targets.push(Target::new(TargetKind::Folder {
-      path: path.clone(),
-      file_name: Some("latest".to_string()),
-    }));
+    let writer: Box<dyn Write + Send> = Box::new(LazyFileWriter::new(path.join("latest.log")));
+
+    let dispatch = fern::Dispatch::new()
+      .format(|out, message, record| {
+        out.finish(format_args!(
+          "[{} {:<5} {}] {}",
+          Local::now().format("%Y-%m-%dT%H:%M:%S"),
+          record.level(),
+          record.target(),
+          message,
+        ))
+      })
+      .chain(writer);
+
+    targets.push(Target::new(TargetKind::Dispatch(dispatch)));
   }
 
   builder.plugin(
