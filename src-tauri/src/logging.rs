@@ -1,5 +1,6 @@
-use std::{fs, io, path::PathBuf};
+use std::{fs, io, path::Path, path::PathBuf};
 
+use chrono::Local;
 use log::LevelFilter;
 use tauri::{Builder, Runtime};
 use tauri_plugin_log::{Builder as LogBuilder, Target, TargetKind};
@@ -13,6 +14,27 @@ pub fn installer_logs_dir() -> io::Result<PathBuf> {
   Ok(log_dir)
 }
 
+fn rotate_latest_log(log_dir: &Path) {
+  let latest = log_dir.join("latest.log");
+
+  if !latest.exists() {
+    return;
+  }
+
+  let timestamp = fs::metadata(&latest)
+    .ok()
+    .and_then(|m| m.modified().ok())
+    .map(|mtime| {
+      let dt: chrono::DateTime<Local> = mtime.into();
+      dt.format("%Y-%m-%d_%H-%M-%S").to_string()
+    })
+    .unwrap_or_else(|| Local::now().format("%Y-%m-%d_%H-%M-%S").to_string());
+
+  let dest = log_dir.join(format!("{timestamp}.log"));
+
+  let _ = fs::rename(&latest, dest);
+}
+
 pub fn with_tauri_logger<R: Runtime>(builder: Builder<R>) -> Builder<R> {
   let log_dir: Option<PathBuf> = dirs::config_dir()
     .map(|base| base.join("vencord-installer-gui").join("logs"))
@@ -20,10 +42,12 @@ pub fn with_tauri_logger<R: Runtime>(builder: Builder<R>) -> Builder<R> {
 
   let mut targets = vec![Target::new(TargetKind::Stdout)];
 
-  if let Some(path) = log_dir {
+  if let Some(ref path) = log_dir {
+    rotate_latest_log(path);
+
     targets.push(Target::new(TargetKind::Folder {
-      path,
-      file_name: None,
+      path: path.clone(),
+      file_name: Some("latest".to_string()),
     }));
   }
 
