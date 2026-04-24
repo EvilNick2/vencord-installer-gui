@@ -13,23 +13,26 @@ pub fn installer_logs_dir() -> io::Result<PathBuf> {
 
   Ok(log_dir)
 }
+
 struct LazyFileWriter {
-  path: PathBuf,
+  log_dir: PathBuf,
   file: Option<fs::File>,
 }
 
 impl LazyFileWriter {
-  fn new(path: PathBuf) -> Self {
-    Self { path, file: None }
+  fn new(log_dir: PathBuf) -> Self {
+    Self { log_dir, file: None }
   }
 
   fn get_or_create(&mut self) -> io::Result<&mut fs::File> {
     if self.file.is_none() {
+      rotate_latest_log(&self.log_dir);
+
       self.file = Some(
         fs::OpenOptions::new()
           .create(true)
           .append(true)
-          .open(&self.path)?,
+          .open(self.log_dir.join("latest.log"))?,
       );
     }
 
@@ -86,9 +89,7 @@ pub fn with_tauri_logger<R: Runtime>(builder: Builder<R>) -> Builder<R> {
   let mut targets = vec![Target::new(TargetKind::Stdout)];
 
   if let Some(ref path) = log_dir {
-    rotate_latest_log(path);
-
-    let writer: Box<dyn Write + Send> = Box::new(LazyFileWriter::new(path.join("latest.log")));
+    let writer: Box<dyn Write + Send> = Box::new(LazyFileWriter::new(path.clone()));
 
     let dispatch = fern::Dispatch::new()
       .format(|out, message, record| {
