@@ -269,7 +269,7 @@ pub fn sync_vencord_repo(
   Ok(repo_path_str.to_string())
 }
 
-pub fn build_vencord_repo(repo_dir: &str) -> Result<String, String> {
+pub fn build_vencord_repo(repo_dir: &str) -> Result<(String, String), String> {
   check_tool("node", &["--version"], "Node.js")?;
   check_tool("npm", &["--version"], "npm")?;
 
@@ -280,21 +280,25 @@ pub fn build_vencord_repo(repo_dir: &str) -> Result<String, String> {
   check_tool("pnpm", &["--version"], "pnpm")
     .map_err(|_| "pnpm is not installed. Please install it via the Dependencies panel before building.".to_string())?;
 
-  run_command(
+  let (install_stdout, install_stderr) = run_command(
     "pnpm",
     &["install"],
     Some(repo_dir),
     "Failed to install project dependencies with pnpm",
   )?;
 
-  run_command(
+  let (build_stdout, build_stderr) = run_command(
     "pnpm",
     &["build"],
     Some(repo_dir),
     "Failed to build Vencord with pnpm",
   )?;
 
-  Ok(format!("Vencord built successfully in {repo_dir}"))
+  let verbose = format!(
+    "pnpm install stdout:\n{install_stdout}\npnpm install stderr:\n{install_stderr}\n\npnpm build stdout:\n{build_stdout}\npnpm build stderr:\n{build_stderr}"
+  );
+
+  Ok((format!("Vencord built successfully in {repo_dir}"), verbose))
 }
 
 pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<String, String> {

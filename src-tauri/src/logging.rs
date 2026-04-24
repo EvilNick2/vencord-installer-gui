@@ -14,13 +14,23 @@ pub fn installer_logs_dir() -> io::Result<PathBuf> {
 }
 
 pub fn with_tauri_logger<R: Runtime>(builder: Builder<R>) -> Builder<R> {
+  let log_dir: Option<PathBuf> = dirs::config_dir()
+    .map(|base| base.join("vencord-installer-gui").join("logs"))
+    .and_then(|dir| fs::create_dir_all(&dir).ok().map(|_| dir));
+
+  let mut targets = vec![Target::new(TargetKind::Stdout)];
+
+  if let Some(path) = log_dir {
+    targets.push(Target::new(TargetKind::Folder {
+      path,
+      file_name: None,
+    }));
+  }
+
   builder.plugin(
     LogBuilder::default()
       .level(LevelFilter::Info)
-      .targets([
-        Target::new(TargetKind::LogDir { file_name: None }),
-        Target::new(TargetKind::Stdout),
-      ])
+      .targets(targets)
       .build(),
   )
 }
