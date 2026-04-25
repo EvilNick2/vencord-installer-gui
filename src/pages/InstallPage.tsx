@@ -166,8 +166,6 @@ export default function InstallPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [flowError, setFlowError] = useState<string | null>(null);
   const [stepStates, setStepStates] = useState<StepStateMap>(buildInitialSteps);
-  const [lastResult, setLastResult] = useState<PatchFlowResult | null>(null);
-  const [activeInstallId, setActiveInstallId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -275,12 +273,7 @@ export default function InstallPage() {
 
     setFlowError(null);
     setIsRunning(true);
-    setLastResult(null);
     setStepStates(buildRunningSteps());
-    setActiveInstallId(
-      selectedInstalls.map((install) => install.name || install.id).join(", ") ||
-        "selected clients"
-    );
 
     let unlisten: UnlistenFn | null = null;
 
@@ -304,7 +297,6 @@ export default function InstallPage() {
       })
 
       const result = await runPatchFlow();
-      setLastResult(result);
       setStepStates(mapFlowToSteps(result));
     } catch (err) {
       setFlowError(String(err));
@@ -315,7 +307,6 @@ export default function InstallPage() {
       }
 
       setIsRunning(false);
-      setActiveInstallId(null);
     }
   };
 
@@ -422,7 +413,15 @@ export default function InstallPage() {
               </div>
             </div>
 
-            {flowError && <p className="error">{flowError}</p>}
+            {flowError && (
+              <div className="error flow-error">
+                <p>{flowError}</p>
+                <details>
+                  <summary>Technical details</summary>
+                  <p className="muted small">Full diagnostic information has been saved to the run log. Open the Logs page to view it or share the log file for support.</p>
+                </details>
+              </div>
+            )}
 
             <ol className="flow-steps">
               {FLOW_STEPS.map((step) => {
@@ -449,47 +448,6 @@ export default function InstallPage() {
                 );
               })}
             </ol>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <div>
-                <h3>Latest run</h3>
-                <p className="muted small">
-                  Review the outcome from the most recent workflow execution.
-                </p>
-              </div>
-              <button className="ghost" onClick={() => setStepStates(buildInitialSteps())} disabled={isRunning}>
-                Reset steps
-              </button>
-            </div>
-
-            {activeInstallId && (
-              <p className="muted">Running installer for {activeInstallId}...</p>
-            )}
-
-            {lastResult ? (
-              <ul className="install-list rich-list compact">
-                {FLOW_STEPS.map((step) => {
-                  const result = lastResult[step.id];
-                  return (
-                    <li key={step.id}>
-                      <div className="install-meta">
-                        <div className="install-name-row">
-                          <span className="install-name">{step.title}</span>
-                          <span className={`pill status-${result?.status ?? "pending"}`}>
-                            {result?.status ?? "pending"}
-                          </span>
-                        </div>
-                        <div className="install-path">{describeStep(step.id, result)}</div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="muted">No runs yet. Start the workflow to see results.</p>
-            )}
           </div>
         </div>
       </div>

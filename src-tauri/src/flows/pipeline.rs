@@ -329,7 +329,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
         });
         run_log::finalize(&mut record, "failed");
         run_log::write_run(&record);
-        return Err(err);
+        return Err(friendly_step_error("backup", &err));
       }
     };
 
@@ -349,7 +349,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
       });
       run_log::finalize(&mut record, "failed");
       run_log::write_run(&record);
-      return Err(err);
+      return Err(friendly_step_error("backup", &err));
     }
 
     let backup_result = backup::BackupResult {
@@ -424,7 +424,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
       });
       run_log::finalize(&mut record, "failed");
       run_log::write_run(&record);
-      return Err(err);
+      return Err(friendly_step_error("syncRepo", &err));
     }
   };
 
@@ -482,7 +482,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
       });
       run_log::finalize(&mut record, "failed");
       run_log::write_run(&record);
-      return Err(err);
+      return Err(friendly_step_error("build", &err));
     }
   };
   emit_step_event(&app, PatchFlowStep::Build, &build_step);
@@ -519,7 +519,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
       });
       run_log::finalize(&mut record, "failed");
       run_log::write_run(&record);
-      return Err(err);
+      return Err(friendly_step_error("inject", &err));
     }
   };
 
@@ -569,7 +569,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
         });
         run_log::finalize(&mut record, "failed");
         run_log::write_run(&record);
-        return Err(err);
+        return Err(friendly_step_error("inject", &err));
       }
     }
   };
@@ -628,7 +628,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
         });
         run_log::finalize(&mut record, "failed");
         run_log::write_run(&record);
-        return Err(err);
+        return Err(friendly_step_error("downloadThemes", &err));
       }
     }
   };
