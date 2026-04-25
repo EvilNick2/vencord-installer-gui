@@ -8,6 +8,7 @@ mod discord;
 mod flows;
 mod logging;
 mod options;
+mod run_log;
 
 fn main() {
   #[cfg(target_os = "linux")]
@@ -31,6 +32,8 @@ fn main() {
         flows::discord_clients::list_discord_processes,
         flows::pipeline::run_patch_flow,
         flows::pipeline::run_dev_test,
+        run_log::list_runs,
+        run_log::open_runs_dir,
         discord::get_discord_installs,
         options::get_user_options,
         options::update_user_options,

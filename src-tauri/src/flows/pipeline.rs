@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::{discord, options};
+use crate::{discord, options, run_log};
+use crate::run_log::RunStep;
 use tauri::Emitter;
 
 use super::{backup, discord_clients, repo, themes};
@@ -191,15 +192,75 @@ pub enum DevTestResult {
   },
 }
 
+fn friendly_step_error(step_id: &str, raw_err: &str) -> String {
+  let lower = raw_err.to_lowercase();
+  match step_id {
+    "backup" => {
+      if lower.contains("permission") || lower.contains("access denied") {
+        "Could not back up Vencord - permission denied. Try running as administrator.".to_string()
+      } else {
+        "Failed to back up your Vencord installation. See the log file for details.".to_string()
+      }
+    }
+    "syncRepo" => {
+      if lower.contains("git") && (lower.contains("not found") || lower.contains("no such file")) {
+        "Could not find git. Please ensure git is installed and available on your PATH.".to_string()
+      } else if lower.contains("network")
+        || lower.contains("connection")
+        || lower.contains("resolve host")
+        || lower.contains("timed out")
+      {
+        "Failed to connect to the Vencord repository. Please check your internet connection.".to_string()
+      } else {
+        "Failed to sync the Vencord repository. See the log file for details.".to_string()
+      }
+    }
+    "build" => {
+      if (lower.contains("pnpm") || lower.contains("npm"))
+        && (lower.contains("not found") || lower.contains("no such file"))
+      {
+        "pnpm could not be found. Please install pnpm and try again.".to_string()
+      } else if lower.contains("exit status") || lower.contains("exited with") {
+        "The build failed. See the log file for details.".to_string()
+      } else {
+        "Failed to build Vencord. See the log file for details.".to_string()
+      }
+    }
+    "inject" => {
+      if lower.contains("permission") || lower.contains("access denied") {
+        "Failed to inject Vencord - permission denied. Try running as administrator.".to_string()
+      } else if lower.contains("not found") || lower.contains("no such file") {
+        "Failed to inject Vencord - could not find the Discord installation.".to_string()
+      } else {
+        "Failed to inject Vencord into Discord. See the log file for details.".to_string()
+      }
+    }
+    "downloadThemes" => {
+      if lower.contains("network")
+        || lower.contains("connection")
+        || lower.contains("timed out")
+        || lower.contains("resolve")
+      {
+        "Failed to download themes - please check your internet connection.".to_string()
+      } else {
+        "Failed to download one or more themes. See the log file for details.".to_string()
+      }
+    }
+    _ => "An unexpected error occurred. See the log file for details.".to_string(),
+  }
+}
+
 #[tauri::command]
 pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, String> {
   log::info!("[patch-flow] Starting install workflow");
+
+  let mut record = run_log::new_record();
 
   let options = run_blocking(options::read_user_options).await?;
   let plugin_urls = options::resolve_plugin_repositories(&options);
   let themes = options::resolve_themes(&options);
 
-  log::info!("[patch-flow] Step: close-discord — starting");
+  log::info!("[patch-flow] Step: close-discord - starting");
   emit_step_event(
     &app,
     PatchFlowStep::CloseDiscord,
@@ -213,18 +274,36 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   .await?;
 
   let close_step = if discord_state.closing_skipped {
-    log::info!("[patch-flow] Step: close-discord — skipped (disabled in settings)");
+    log::info!("[patch-flow] Step: close-discord - skipped (disabled in settings)");
     StepResult::skipped("Closing Discord is disabled in settings")
   } else {
-    log::info!("[patch-flow] Step: close-discord — completed ({} client(s) closed)", discord_state.closed_clients.len());
+    log::info!(
+      "[patch-flow] Step: close-discord - completed ({} client(s) closed)",
+      discord_state.closed_clients.len()
+    );
     StepResult::completed(discord_state.closed_clients.clone())
   };
   emit_step_event(&app, PatchFlowStep::CloseDiscord, &close_step);
+  record.steps.push(RunStep {
+    id: "closeDiscord".to_string(),
+    title: "Close Discord".to_string(),
+    status: if discord_state.closing_skipped {
+      "skipped".to_string()
+    } else {
+      "completed".to_string()
+    },
+    friendly_message: if discord_state.closing_skipped {
+      "Discord was not closed (disabled in settings)".to_string()
+    } else {
+      format!("{} Discord client(s) closed", discord_state.closed_clients.len())
+    },
+    verbose_detail: None,
+  });
 
   let vencord_install = PathBuf::from(&options.vencord_repo_dir);
   let theme_sources = options::resolve_themes(&options);
 
-  log::info!("[patch-flow] Step: backup — starting");
+  log::info!("[patch-flow] Step: backup - starting");
   emit_step_event(
     &app,
     PatchFlowStep::Backup,
@@ -232,19 +311,46 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   );
 
   let backup_step = if vencord_install.exists() {
-    let backup_path = run_blocking({
+    let backup_path = match run_blocking({
       let vencord_install = vencord_install.clone();
       let theme_sources = theme_sources.clone();
       move || backup::move_vencord_install(&vencord_install, &theme_sources)
     })
-    .await?;
+    .await
+    {
+      Ok(p) => p,
+      Err(err) => {
+        record.steps.push(RunStep {
+          id: "backup".to_string(),
+          title: "Backup Vencord".to_string(),
+          status: "failed".to_string(),
+          friendly_message: friendly_step_error("backup", &err),
+          verbose_detail: Some(err.clone()),
+        });
+        run_log::finalize(&mut record, "failed");
+        run_log::write_run(&record);
+        return Err(err);
+      }
+    };
 
-    run_blocking({
+    if let Err(err) = run_blocking({
       let max_count = options.max_backup_count;
       let max_size = options.max_backup_size_mb;
       move || backup::apply_backup_limits(max_count, max_size)
     })
-    .await?;
+    .await
+    {
+      record.steps.push(RunStep {
+        id: "backup".to_string(),
+        title: "Backup Vencord".to_string(),
+        status: "failed".to_string(),
+        friendly_message: friendly_step_error("backup", &err),
+        verbose_detail: Some(err.clone()),
+      });
+      run_log::finalize(&mut record, "failed");
+      run_log::write_run(&record);
+      return Err(err);
+    }
 
     let backup_result = backup::BackupResult {
       source_path: vencord_install.to_string_lossy().into_owned(),
@@ -254,18 +360,37 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
       closing_skipped: discord_state.closing_skipped,
     };
 
-    log::info!("[patch-flow] Step: backup — completed");
+    log::info!("[patch-flow] Step: backup - completed");
     StepResult::completed(backup_result)
   } else {
-    log::info!("[patch-flow] Step: backup — skipped (no existing install)");
+    log::info!("[patch-flow] Step: backup - skipped (no existing install)");
     StepResult::skipped(format!(
       "No Vencord installation found at {}; skipping backup",
       vencord_install.display()
     ))
   };
   emit_step_event(&app, PatchFlowStep::Backup, &backup_step);
+  record.steps.push(RunStep {
+    id: "backup".to_string(),
+    title: "Backup Vencord".to_string(),
+    status: match backup_step.status {
+      StepStatus::Completed => "completed",
+      StepStatus::Skipped => "skipped",
+      _ => "pending",
+    }
+    .to_string(),
+    friendly_message: match backup_step.status {
+      StepStatus::Completed => "Vencord backed up successfully".to_string(),
+      StepStatus::Skipped => backup_step
+        .message
+        .clone()
+        .unwrap_or_else(|| "No existing installation to back up".to_string()),
+      _ => "Pending".to_string(),
+    },
+    verbose_detail: None,
+  });
 
-  log::info!("[patch-flow] Step: sync-repo — starting");
+  log::info!("[patch-flow] Step: sync-repo - starting");
   emit_step_event(
     &app,
     PatchFlowStep::SyncRepo,
@@ -282,7 +407,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   {
     Ok(path) => path,
     Err(err) => {
-      log::error!("[patch-flow] Step: sync-repo — failed: {err}");
+      log::error!("[patch-flow] Step: sync-repo - failed: {err}");
       if !discord_state.closing_skipped {
         let _ = run_blocking({
           let processes = discord_state.processes.clone();
@@ -290,16 +415,31 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
         })
         .await;
       }
-
+      record.steps.push(RunStep {
+        id: "syncRepo".to_string(),
+        title: "Sync repository".to_string(),
+        status: "failed".to_string(),
+        friendly_message: friendly_step_error("syncRepo", &err),
+        verbose_detail: Some(err.clone()),
+      });
+      run_log::finalize(&mut record, "failed");
+      run_log::write_run(&record);
       return Err(err);
     }
   };
 
-  log::info!("[patch-flow] Step: sync-repo — completed at {sync_path}");
+  log::info!("[patch-flow] Step: sync-repo - completed at {sync_path}");
   let sync_step = StepResult::completed(sync_path.clone());
   emit_step_event(&app, PatchFlowStep::SyncRepo, &sync_step);
+  record.steps.push(RunStep {
+    id: "syncRepo".to_string(),
+    title: "Sync repository".to_string(),
+    status: "completed".to_string(),
+    friendly_message: "Repository synced successfully".to_string(),
+    verbose_detail: None,
+  });
 
-  log::info!("[patch-flow] Step: build — starting");
+  log::info!("[patch-flow] Step: build - starting");
   emit_step_event(
     &app,
     PatchFlowStep::Build,
@@ -313,12 +453,19 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   .await
   {
     Ok((message, verbose)) => {
-      log::info!("[patch-flow] Step: build — completed");
+      log::info!("[patch-flow] Step: build - completed");
       log::debug!("[patch-flow] Build output: {verbose}");
+      record.steps.push(RunStep {
+        id: "build".to_string(),
+        title: "Build files".to_string(),
+        status: "completed".to_string(),
+        friendly_message: "Vencord built successfully".to_string(),
+        verbose_detail: Some(verbose),
+      });
       StepResult::completed(message)
     }
     Err(err) => {
-      log::error!("[patch-flow] Step: build — failed: {err}");
+      log::error!("[patch-flow] Step: build - failed: {err}");
       if !discord_state.closing_skipped {
         let _ = run_blocking({
           let processes = discord_state.processes.clone();
@@ -326,13 +473,21 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
         })
         .await;
       }
-
+      record.steps.push(RunStep {
+        id: "build".to_string(),
+        title: "Build files".to_string(),
+        status: "failed".to_string(),
+        friendly_message: friendly_step_error("build", &err),
+        verbose_detail: Some(err.clone()),
+      });
+      run_log::finalize(&mut record, "failed");
+      run_log::write_run(&record);
       return Err(err);
     }
   };
   emit_step_event(&app, PatchFlowStep::Build, &build_step);
 
-  log::info!("[patch-flow] Step: inject — starting");
+  log::info!("[patch-flow] Step: inject - starting");
   emit_step_event(
     &app,
     PatchFlowStep::Inject,
@@ -347,7 +502,7 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   {
     Ok(locations) => locations,
     Err(err) => {
-      log::error!("[patch-flow] Step: inject — failed resolving locations: {err}");
+      log::error!("[patch-flow] Step: inject - failed resolving locations: {err}");
       if !discord_state.closing_skipped {
         let _ = run_blocking({
           let processes = discord_state.processes.clone();
@@ -355,13 +510,28 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
         })
         .await;
       }
-
+      record.steps.push(RunStep {
+        id: "inject".to_string(),
+        title: "Inject Vencord".to_string(),
+        status: "failed".to_string(),
+        friendly_message: friendly_step_error("inject", &err),
+        verbose_detail: Some(err.clone()),
+      });
+      run_log::finalize(&mut record, "failed");
+      run_log::write_run(&record);
       return Err(err);
     }
   };
 
   let inject_step = if inject_locations.is_empty() {
-    log::info!("[patch-flow] Step: inject — skipped (no clients selected)");
+    log::info!("[patch-flow] Step: inject - skipped (no clients selected)");
+    record.steps.push(RunStep {
+      id: "inject".to_string(),
+      title: "Inject Vencord".to_string(),
+      status: "skipped".to_string(),
+      friendly_message: "No Discord clients selected for injection".to_string(),
+      verbose_detail: None,
+    });
     StepResult::skipped("No Discord clients selected for injection")
   } else {
     match run_blocking({
@@ -371,11 +541,18 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
     .await
     {
       Ok(message) => {
-        log::info!("[patch-flow] Step: inject — completed");
+        log::info!("[patch-flow] Step: inject - completed");
+        record.steps.push(RunStep {
+          id: "inject".to_string(),
+          title: "Inject Vencord".to_string(),
+          status: "completed".to_string(),
+          friendly_message: "Vencord injected into Discord successfully".to_string(),
+          verbose_detail: None,
+        });
         StepResult::completed(message)
       }
       Err(err) => {
-        log::error!("[patch-flow] Step: inject — failed: {err}");
+        log::error!("[patch-flow] Step: inject - failed: {err}");
         if !discord_state.closing_skipped {
           let _ = run_blocking({
             let processes = discord_state.processes.clone();
@@ -383,14 +560,22 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
           })
           .await;
         }
-
+        record.steps.push(RunStep {
+          id: "inject".to_string(),
+          title: "Inject Vencord".to_string(),
+          status: "failed".to_string(),
+          friendly_message: friendly_step_error("inject", &err),
+          verbose_detail: Some(err.clone()),
+        });
+        run_log::finalize(&mut record, "failed");
+        run_log::write_run(&record);
         return Err(err);
       }
     }
   };
   emit_step_event(&app, PatchFlowStep::Inject, &inject_step);
 
-  log::info!("[patch-flow] Step: download-themes — starting");
+  log::info!("[patch-flow] Step: download-themes - starting");
   emit_step_event(
     &app,
     PatchFlowStep::DownloadThemes,
@@ -398,7 +583,14 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   );
 
   let themes_step = if themes.is_empty() {
-    log::info!("[patch-flow] Step: download-themes — skipped (none enabled)");
+    log::info!("[patch-flow] Step: download-themes - skipped (none enabled)");
+    record.steps.push(RunStep {
+      id: "downloadThemes".to_string(),
+      title: "Download themes".to_string(),
+      status: "skipped".to_string(),
+      friendly_message: "No themes enabled; skipping download".to_string(),
+      verbose_detail: None,
+    });
     StepResult::skipped("No themes enabled; skipping download")
   } else {
     match run_blocking({
@@ -408,11 +600,18 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
     .await
     {
       Ok(message) => {
-        log::info!("[patch-flow] Step: download-themes — completed");
+        log::info!("[patch-flow] Step: download-themes - completed");
+        record.steps.push(RunStep {
+          id: "downloadThemes".to_string(),
+          title: "Download themes".to_string(),
+          status: "completed".to_string(),
+          friendly_message: "Themes downloaded successfully".to_string(),
+          verbose_detail: None,
+        });
         StepResult::completed(message)
       }
       Err(err) => {
-        log::error!("[patch-flow] Step: download-themes — failed: {err}");
+        log::error!("[patch-flow] Step: download-themes - failed: {err}");
         if !discord_state.closing_skipped {
           let _ = run_blocking({
             let processes = discord_state.processes.clone();
@@ -420,14 +619,22 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
           })
           .await;
         }
-
+        record.steps.push(RunStep {
+          id: "downloadThemes".to_string(),
+          title: "Download themes".to_string(),
+          status: "failed".to_string(),
+          friendly_message: friendly_step_error("downloadThemes", &err),
+          verbose_detail: Some(err.clone()),
+        });
+        run_log::finalize(&mut record, "failed");
+        run_log::write_run(&record);
         return Err(err);
       }
     }
   };
   emit_step_event(&app, PatchFlowStep::DownloadThemes, &themes_step);
 
-  log::info!("[patch-flow] Step: reopen-discord — starting");
+  log::info!("[patch-flow] Step: reopen-discord - starting");
   emit_step_event(
     &app,
     PatchFlowStep::ReopenDiscord,
@@ -435,7 +642,14 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
   );
 
   let reopen_step = if discord_state.closing_skipped {
-    log::info!("[patch-flow] Step: reopen-discord — skipped (Discord was not closed)");
+    log::info!("[patch-flow] Step: reopen-discord - skipped (Discord was not closed)");
+    record.steps.push(RunStep {
+      id: "reopenDiscord".to_string(),
+      title: "Reopen Discord".to_string(),
+      status: "skipped".to_string(),
+      friendly_message: "Discord was not closed; no restart needed".to_string(),
+      verbose_detail: None,
+    });
     StepResult::skipped("Discord was not closed; no restart needed")
   } else {
     let restarted = run_blocking({
@@ -445,12 +659,22 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
     .await
     .unwrap_or_default();
 
-    log::info!("[patch-flow] Step: reopen-discord — completed");
+    log::info!("[patch-flow] Step: reopen-discord - completed");
+    record.steps.push(RunStep {
+      id: "reopenDiscord".to_string(),
+      title: "Reopen Discord".to_string(),
+      status: "completed".to_string(),
+      friendly_message: "Discord restarted successfully".to_string(),
+      verbose_detail: None,
+    });
     StepResult::completed(restarted)
   };
   emit_step_event(&app, PatchFlowStep::ReopenDiscord, &reopen_step);
 
   log::info!("[patch-flow] Install workflow completed successfully");
+
+  run_log::finalize(&mut record, "completed");
+  run_log::write_run(&record);
 
   Ok(PatchFlowResult {
     close_discord: close_step,
