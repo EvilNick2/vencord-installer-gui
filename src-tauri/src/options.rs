@@ -275,6 +275,16 @@ fn reconcile_options(mut options: UserOptions) -> Result<UserOptions, String> {
     updated = true;
   }
 
+  if options.max_backup_count.is_none() {
+    options.max_backup_count = default_max_backup_count();
+    updated = true;
+  }
+
+  if options.max_backup_size_mb.is_none() {
+    options.max_backup_size_mb = default_max_backup_size_mb();
+    updated = true;
+  }
+
   if updated {
     save_options(&options)?;
   }
