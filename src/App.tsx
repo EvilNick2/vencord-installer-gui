@@ -2,15 +2,13 @@ import { useRef, useState } from 'react'
 import HomePage from "./pages/HomePage";
 import InstallPage from "./pages/InstallPage";
 import BackupsPage from "./pages/BackupsPage";
-// import LogsPage from "./pages/LogsPage";
+import LogsPage from "./pages/LogsPage";
 import DevTestsPage from "./pages/DevTestsPage";
 import SettingsPage from "./pages/SettingsPage";
 import Dock from "./components/Dock";
 import './App.css'
 
 import { House, FolderSync, ClipboardClock, FolderCode, Settings, Archive } from "lucide-react";
-
-void ClipboardClock; // temporary
 
 type Page = 'home' | 'install' | 'backups' | 'logs' | 'settings' | 'devTests';
 
@@ -45,7 +43,7 @@ function App() {
     { icon: <House size={18} />, label: 'Home', active: page === 'home', onClick: () => handleNavigate('home') },
     { icon: <FolderSync size={18} />, label: 'Install', active: page === 'install', onClick: () => handleNavigate('install') },
     { icon: <Archive size={18} />, label: 'Backups', active: page === 'backups', onClick: () => handleNavigate('backups') },
-    // { icon: <ClipboardClock size={18} />, label: 'Logs', active: page === 'logs', onClick: () => handleNavigate('logs') },
+    { icon: <ClipboardClock size={18} />, label: 'Logs', active: page === 'logs', onClick: () => handleNavigate('logs') },
     ...(showDevTests
       ? [{ icon: <FolderCode size={18} />, label: 'Dev Tests', active: page === 'devTests', onClick: () => handleNavigate('devTests') }]
       : []),
@@ -66,7 +64,7 @@ function App() {
           {page === 'home' && <HomePage />}
           {page === 'install' && <InstallPage />}
           {page === 'backups' && <BackupsPage />}
-          {/* {page === 'logs' && <LogsPage />} */}
+          {page === 'logs' && <LogsPage />}
           {showDevTests && page === 'devTests' && <DevTestsPage />}
           {page === 'settings' && (
             <SettingsPage onPendingChange={(pending) => updateSettingsPending(pending)} />

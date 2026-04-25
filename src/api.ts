@@ -164,3 +164,27 @@ export async function installDependency(id: string): Promise<DependencyStatus> {
   const result = await invoke<DependencyStatus>("install_dependency", { id });
   return result;
 }
+
+export type RunStep = {
+  id: string;
+  title: string;
+  status: string;
+  friendlyMessage: string;
+  verboseDetail?: string;
+};
+
+export type RunRecord = {
+  id: string;
+  startedAt: string;
+  completedAt?: string;
+  overallStatus: string;
+  steps: RunStep[];
+};
+
+export async function listFlowRuns(): Promise<RunRecord[]> {
+  return await invoke<RunRecord[]>("list_runs");
+}
+
+export async function openRunsDir(): Promise<void> {
+  await invoke("open_runs_dir");
+}
