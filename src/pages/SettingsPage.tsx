@@ -37,6 +37,7 @@ export default function SettingsPage({
     userThemes: false,
     maxBackupCount: false,
     maxBackupSizeMb: false,
+    maxRunLogCount: false,
   });
 
   useEffect(() => {
@@ -58,7 +59,8 @@ export default function SettingsPage({
     dirtyFields.userRepos ||
     dirtyFields.userThemes ||
     dirtyFields.maxBackupCount ||
-    dirtyFields.maxBackupSizeMb;
+    dirtyFields.maxBackupSizeMb ||
+    dirtyFields.maxRunLogCount;
 
   useEffect(() => {
     onPendingChange?.(hasPending);
@@ -464,6 +466,37 @@ export default function SettingsPage({
                     <small>Oldest backups are pruned when the total size exceeds this value. Leave blank for no size limit.</small>
                   </div>
                 </>
+              ),
+            },
+            {
+              id: "run-logs",
+              title: "Run log retention",
+              content: (
+                <div className="form-field">
+                  <label htmlFor="max-run-log-count">Maximum run logs to keep</label>
+                  <input
+                    id="max-run-log-count"
+                    type="number"
+                    className="text-input"
+                    min={1}
+                    value={options.maxRunLogCount ?? ''}
+                    onChange={(e) => {
+                      setOptions({ ...options, maxRunLogCount: parseNumberInput(e.target.value) });
+                      setDirtyFields((prev) => ({ ...prev, maxRunLogCount: true }));
+                      setMessage(null);
+                    }}
+                    onBlur={async () => {
+                      if (!options || saving || !dirtyFields.maxRunLogCount) return;
+
+                      const saved = await saveOptions(options, { syncUserReposText: false });
+                      if (saved) {
+                        setDirtyFields((prev) => ({ ...prev, maxRunLogCount: false }));
+                      }
+                    }}
+                    placeholder="50"
+                  />
+                  <small>Older run logs are removed after new ones are written. Defaults to 50.</small>
+                </div>
               ),
             },
             {

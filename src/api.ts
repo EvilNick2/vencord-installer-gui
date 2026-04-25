@@ -35,6 +35,7 @@ export type UserOptions = {
   selectedDiscordClients: string[];
   maxBackupCount?: number | null;
   maxBackupSizeMb?: number | null;
+  maxRunLogCount?: number | null;
 };
 
 export type BackupResult = {

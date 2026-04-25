@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use tauri_plugin_opener::OpenerExt;
 
-use crate::config::app_config_dir;
+use crate::{config::app_config_dir, options};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,10 +104,14 @@ pub fn write_run(record: &RunRecord) {
     log::info!("[run-log] Written to {}", path.display());
   }
 
-  prune_runs(&dir);
+  let max_count = options::read_user_options()
+    .map(|o| o.max_run_log_count.unwrap_or(50))
+    .unwrap_or(50);
+
+  prune_runs(&dir, max_count);
 }
 
-fn prune_runs(dir: &PathBuf) {
+fn prune_runs(dir: &PathBuf, max_count: u32) {
   let mut entries: Vec<PathBuf> = match fs::read_dir(dir) {
     Ok(rd) => rd
       .filter_map(|e| e.ok())
@@ -119,8 +123,8 @@ fn prune_runs(dir: &PathBuf) {
 
   entries.sort();
 
-  if entries.len() > 50 {
-    for old in &entries[..entries.len() - 50] {
+  if entries.len() > max_count as usize {
+    for old in &entries[..entries.len() - max_count as usize] {
       let _ = fs::remove_file(old);
     }
   }

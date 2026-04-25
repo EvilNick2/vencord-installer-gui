@@ -25,6 +25,10 @@ fn default_max_backup_size_mb() -> Option<u64> {
   None
 }
 
+fn default_max_run_log_count() -> Option<u32> {
+  Some(50)
+}
+
 fn default_selected_discord_clients() -> Vec<String> {
   vec!["stable".to_string()]
 }
@@ -134,6 +138,8 @@ pub struct OptionsResponse {
   pub max_backup_count: Option<u32>,
   #[serde(default = "default_max_backup_size_mb")]
   pub max_backup_size_mb: Option<u64>,
+  #[serde(default = "default_max_run_log_count")]
+  pub max_run_log_count: Option<u32>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -158,6 +164,8 @@ pub struct UserOptions {
   pub max_backup_count: Option<u32>,
   #[serde(default = "default_max_backup_size_mb")]
   pub max_backup_size_mb: Option<u64>,
+  #[serde(default = "default_max_run_log_count")]
+  pub max_run_log_count: Option<u32>,
 }
 
 impl Default for UserOptions {
@@ -186,6 +194,7 @@ impl Default for UserOptions {
       selected_discord_clients: default_selected_discord_clients(),
       max_backup_count: default_max_backup_count(),
       max_backup_size_mb: default_max_backup_size_mb(),
+      max_run_log_count: default_max_run_log_count(),
     }
   }
 }
@@ -355,6 +364,7 @@ fn to_response(options: UserOptions) -> OptionsResponse {
     selected_discord_clients: options.selected_discord_clients,
     max_backup_count: options.max_backup_count,
     max_backup_size_mb: options.max_backup_size_mb,
+    max_run_log_count: options.max_run_log_count,
   }
 }
 
@@ -401,6 +411,7 @@ fn to_storage(options: OptionsResponse) -> UserOptions {
     selected_discord_clients: options.selected_discord_clients,
     max_backup_count: options.max_backup_count,
     max_backup_size_mb: options.max_backup_size_mb,
+    max_run_log_count: options.max_run_log_count,
   }
 }
 
