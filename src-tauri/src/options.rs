@@ -18,11 +18,11 @@ fn default_repo_base_dir() -> String {
 }
 
 fn default_max_backup_count() -> Option<u32> {
-  None
+  Some(10)
 }
 
 fn default_max_backup_size_mb() -> Option<u64> {
-  None
+  Some(500)
 }
 
 fn default_max_run_log_count() -> Option<u32> {
