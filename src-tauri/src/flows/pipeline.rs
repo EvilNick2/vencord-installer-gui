@@ -540,14 +540,14 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
     })
     .await
     {
-      Ok(message) => {
+      Ok((message, verbose)) => {
         log::info!("[patch-flow] Step: inject - completed");
         record.steps.push(RunStep {
           id: "inject".to_string(),
           title: "Inject Vencord".to_string(),
           status: "completed".to_string(),
           friendly_message: "Vencord injected into Discord successfully".to_string(),
-          verbose_detail: None,
+          verbose_detail: if verbose.is_empty() { None } else { Some(verbose) },
         });
         StepResult::completed(message)
       }
@@ -751,7 +751,8 @@ pub fn run_dev_test(
         });
       }
 
-      let message = repo::inject_vencord_repo(&options.vencord_repo_dir, &locations)?;
+      let message = repo::inject_vencord_repo(&options.vencord_repo_dir, &locations)
+        .map(|(msg, _)| msg)?;
 
       Ok(DevTestResult::Inject { message })
     }

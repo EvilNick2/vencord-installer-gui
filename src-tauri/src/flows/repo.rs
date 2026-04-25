@@ -301,9 +301,9 @@ pub fn build_vencord_repo(repo_dir: &str) -> Result<(String, String), String> {
   Ok((format!("Vencord built successfully in {repo_dir}"), verbose))
 }
 
-pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<String, String> {
+pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<(String, String), String> {
   if locations.is_empty() {
-    return Ok("No Discord clients selected for injection; skipping".to_string());
+    return Ok(("No Discord clients selected for injection; skipping".to_string(), String::new()));
   }
 
   check_tool("pnpm", &["--version"], "pnpm")?;
@@ -348,9 +348,14 @@ pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<Strin
     per_location_details.push(detail_lines.join("\n"))
   }
 
-  Ok(format!(
-    "Injected Vencord into {} Discord client(s)\n{}",
+  let verbose = format!(
+    "Injected {} location(s):\n{}",
     locations.len(),
     per_location_details.join("\n")
+  );
+
+  Ok((
+    format!("Injected Vencord into {} Discord client(s)", locations.len()),
+    verbose,
   ))
 }
