@@ -1,0 +1,72 @@
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  color-scheme: dark;
+
+  --nav-height: 48px;
+  --sidebar-width: 200px;
+
+  --bg: #08080e;
+  --surface: #0d0d1a;
+  --surface-raised: #0a0a14;
+  --border: #1a1a2e;
+  --border-subtle: #14142a;
+
+  --accent: #6d28d9;
+  --accent-bright: #8b5cf6;
+  --accent-soft: #a78bfa;
+  --accent-surface: rgba(109, 40, 217, 0.1);
+  --accent-border: rgba(109, 40, 217, 0.2);
+
+  --text-primary: #c4b5fd;
+  --text-secondary: #9b8fcc;
+  --text-muted: #4a4a6a;
+  --text-faint: #3d3d5c;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #f87171;
+
+  --app-bg: var(--bg);
+  --secondary-surface: var(--surface-raised);
+  --sidebar-bg: var(--surface-raised);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --accent-strong: var(--accent-bright);
+
+  --button-bg: #1a1a2e;
+  --button-hover: #1f1f38;
+  --button-border: var(--border);
+  --button-text: var(--text-primary);
+
+  --input-bg: var(--surface-raised);
+  --input-border: var(--border);
+  --input-text: var(--text-primary);
+
+  --success-bg: rgba(34, 197, 94, 0.12);
+  --success-text: #22c55e;
+  --success-border: rgba(34, 197, 94, 0.25);
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-text: #f59e0b;
+  --warning-border: rgba(245, 158, 11, 0.25);
+  --info-bg: rgba(109, 40, 217, 0.12);
+  --info-text: var(--accent-soft);
+  --info-border: rgba(109, 40, 217, 0.25);
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger-text: #f87171;
+  --danger-border: rgba(248, 113, 113, 0.25);
+  --idle-bg: rgba(74, 74, 106, 0.16);
+  --idle-text: var(--text-muted);
+  --idle-border: rgba(74, 74, 106, 0.22);
+  --skipped-bg: rgba(74, 74, 106, 0.16);
+  --skipped-text: var(--text-muted);
+  --skipped-border: rgba(74, 74, 106, 0.22);
+
+  --list-item-padding: 12px 14px;
+  --list-item-radius: 6px;
+  --list-row-gap: 10px;
+  --list-checkbox-offset: 3px;
+  --list-subtitle-size: 12px;
+  --list-meta-gap: 2px;
+  --list-code-size: 12px;
+}
