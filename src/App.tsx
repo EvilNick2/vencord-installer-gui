@@ -5,15 +5,14 @@ import BackupsPage from "./pages/BackupsPage";
 import LogsPage from "./pages/LogsPage";
 import DevTestsPage from "./pages/DevTestsPage";
 import SettingsPage from "./pages/SettingsPage";
-import Dock from "./components/Dock";
+import TopNav from "./components/TopNav";
 import './App.css'
-
-import { House, FolderSync, ClipboardClock, FolderCode, Settings, Archive } from "lucide-react";
 
 type Page = 'home' | 'install' | 'backups' | 'logs' | 'settings' | 'devTests';
 
 function App() {
   const [page, setPage] = useState<Page>('home');
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const settingsPendingRef = useRef(false);
   const showDevTests = import.meta.env.DEV;
 
@@ -26,51 +25,47 @@ function App() {
       const confirmLeave = window.confirm(
         'You have unsaved changed in settings. Leave without saving?'
       );
-
-      if (!confirmLeave) {
-        return;
-      }
+      if (!confirmLeave) return;
     }
-
-    if (!showDevTests && nextPage === 'devTests') {
-      return;
-    }
-
+    if (!showDevTests && nextPage === 'devTests') return;
     setPage(nextPage);
   };
 
-  const dockItems = [
-    { icon: <House size={18} />, label: 'Home', active: page === 'home', onClick: () => handleNavigate('home') },
-    { icon: <FolderSync size={18} />, label: 'Install', active: page === 'install', onClick: () => handleNavigate('install') },
-    { icon: <Archive size={18} />, label: 'Backups', active: page === 'backups', onClick: () => handleNavigate('backups') },
-    { icon: <ClipboardClock size={18} />, label: 'Logs', active: page === 'logs', onClick: () => handleNavigate('logs') },
-    ...(showDevTests
-      ? [{ icon: <FolderCode size={18} />, label: 'Dev Tests', active: page === 'devTests', onClick: () => handleNavigate('devTests') }]
-      : []),
-    { icon: <Settings size={18} />, label: 'Settings', active: page === 'settings', onClick: () => handleNavigate('settings') }
-  ]
-
   return (
-    <div className='app-root'>
-      <Dock
-        items={dockItems}
-        panelHeight={60}
-        baseItemSize={50}
-        magnification={55}
+    <div className="app-root">
+      <TopNav
+        activePage={page}
+        onNavigate={handleNavigate}
+        showDevTests={showDevTests}
+        onUpdateClick={() => setUpdateModalOpen(true)}
       />
-
-      <main className="content">
-        <div className="page">
-          {page === 'home' && <HomePage />}
-          {page === 'install' && <InstallPage />}
-          {page === 'backups' && <BackupsPage />}
-          {page === 'logs' && <LogsPage />}
-          {showDevTests && page === 'devTests' && <DevTestsPage />}
-          {page === 'settings' && (
-            <SettingsPage onPendingChange={(pending) => updateSettingsPending(pending)} />
-          )}
+      <div className="app-body">
+        <main className="app-content">
+          <div className="page">
+            {page === 'home' && <HomePage />}
+            {page === 'install' && <InstallPage />}
+            {page === 'backups' && <BackupsPage />}
+            {page === 'logs' && <LogsPage />}
+            {showDevTests && page === 'devTests' && <DevTestsPage />}
+            {page === 'settings' && (
+              <SettingsPage onPendingChange={updateSettingsPending} />
+            )}
+          </div>
+        </main>
+      </div>
+      {updateModalOpen && (
+        <div className="modal-backdrop" onClick={() => setUpdateModalOpen(false)}>
+          <div className="modal-panel" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Application updates</h3>
+              <button onClick={() => setUpdateModalOpen(false)}>✕</button>
+            </div>
+            <div style={{ padding: '20px', color: 'var(--text-muted)', fontSize: '13px' }}>
+              TODO
+            </div>
+          </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }
