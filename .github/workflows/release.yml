@@ -160,7 +160,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "## Bug Fixes\n\n### Command Utils\n\n- Resolve PATH via login shell for desktop launches"
+          releaseBody: "## What's New\n\n  - **Complete UI redesign**: New deep-void dark theme with a consistent panel-based layout across all pages\n  - **Top navigation bar**: The bottom dock has been replaced with a persistent top nav bar\n  - **Run history**: The Logs page now shows a full history of installation runs, with per-step status, detail, and timing\n  - **Configurable log retention**: Maximum number of saved run logs is now configurable in Settings (default: 50)\n  - **User-friendly install errors**: The install page now surfaces readable error messages instead of raw output when a step fails\n\n  ## Bug Fixes\n\n  ### Install\n\n  - Injection no longer outputs full verbose logs - only errors are surfaced\n\n  ### Settings\n\n  - Backup retention values now fall back to defaults for users who installed before defaults were introduced\n\n  ### Logging\n\n  - Log files are no longer created until the first entry is written, preventing empty files from accumulating in the logs folder\n  - Log files are now correctly written to the app config directory across sessions\n  - Fixed an issue where the latest log file was renamed before a new session began"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
