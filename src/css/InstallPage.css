@@ -1,0 +1,213 @@
+.install-grid--full {
+  height: calc(100vh - var(--nav-height) - 7rem);
+}
+
+.install-client {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.install-client:hover {
+  border-color: var(--accent-border);
+}
+
+.install-client.selected {
+  border-color: rgba(109, 40, 217, 0.5);
+  background: rgba(109, 40, 217, 0.08);
+}
+
+.install-client.absent {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.install-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.install-client.selected .install-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.install-check-mark {
+  width: 11px;
+  height: 11px;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4L4 7L9 1' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.install-client.selected .install-check-mark {
+  opacity: 1;
+}
+
+.install-client-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.install-client-name {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.install-client-path {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.install-client-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.install-client-dot.running { background: var(--success); box-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
+.install-client-dot.stopped { background: #2a2a3a; }
+
+.pipe-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 18px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.pipe-step.done    { border-color: rgba(34, 197, 94, 0.2);    background: rgba(34, 197, 94, 0.04); }
+.pipe-step.running { border-color: rgba(109, 40, 217, 0.4);   background: rgba(109, 40, 217, 0.06); }
+.pipe-step.failed  { border-color: rgba(248, 113, 113, 0.25); background: rgba(248, 113, 113, 0.04); }
+
+.pipe-step__num {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #141421;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.pipe-step.done .pipe-step__num {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--success);
+}
+
+.pipe-step.running .pipe-step__num {
+  background: rgba(109, 40, 217, 0.2);
+  border-color: rgba(109, 40, 217, 0.5);
+  color: var(--accent-soft);
+  animation: pipe-pulse 1.2s ease-in-out infinite;
+}
+
+.pipe-step.failed .pipe-step__num {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--error);
+}
+
+@keyframes pipe-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.pipe-step__info { flex: 1; min-width: 0; }
+
+.pipe-step__name {
+  font-size: 0.9375rem;
+  color: var(--accent-soft);
+  font-weight: 500;
+}
+
+.pipe-step.done .pipe-step__name    { color: #4ade80; }
+.pipe-step.running .pipe-step__name { color: var(--accent-soft); }
+.pipe-step.failed .pipe-step__name  { color: var(--error); }
+
+.pipe-step__detail {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pipe-step__badge {
+  font-size: 0.6875rem;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.pipe-step__badge.idle    { background: #141421; color: #3a3a5a; }
+.pipe-step__badge.running { background: rgba(109, 40, 217, 0.15); color: var(--accent-soft); }
+.pipe-step__badge.done    { background: rgba(34, 197, 94, 0.12);  color: var(--success); }
+.pipe-step__badge.failed  { background: rgba(248, 113, 113, 0.12); color: var(--error); }
+.pipe-step__badge.skipped { background: rgba(100, 100, 140, 0.15); color: var(--text-muted); }
+
+.install-btn-primary {
+  width: 100%;
+  padding: 16px 28px;
+  background: linear-gradient(135deg, var(--accent), #4c1d95);
+  border: none;
+  border-radius: 8px;
+  color: #e9d5ff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 28px rgba(109, 40, 217, 0.4);
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.install-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.install-btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.panel-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}

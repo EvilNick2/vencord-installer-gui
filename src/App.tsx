@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { check } from '@tauri-apps/plugin-updater'
 import HomePage from "./pages/HomePage";
 import InstallPage from "./pages/InstallPage";
 import BackupsPage from "./pages/BackupsPage";
@@ -6,6 +7,7 @@ import LogsPage from "./pages/LogsPage";
 import DevTestsPage from "./pages/DevTestsPage";
 import SettingsPage from "./pages/SettingsPage";
 import TopNav from "./components/TopNav";
+import UpdateModal from "./components/UpdateModal";
 import './App.css'
 
 type Page = 'home' | 'install' | 'backups' | 'logs' | 'settings' | 'devTests';
@@ -14,6 +16,10 @@ function App() {
   const [page, setPage] = useState<Page>('home');
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const settingsPendingRef = useRef(false);
+
+  useEffect(() => {
+    check().then(update => { if (update) setUpdateModalOpen(true); }).catch(() => {});
+  }, []);
   const showDevTests = import.meta.env.DEV;
 
   const updateSettingsPending = (pending: boolean) => {
@@ -37,35 +43,24 @@ function App() {
         activePage={page}
         onNavigate={handleNavigate}
         showDevTests={showDevTests}
-        onUpdateClick={() => setUpdateModalOpen(true)}
       />
       <div className="app-body">
         <main className="app-content">
-          <div className="page">
-            {page === 'home' && <HomePage />}
-            {page === 'install' && <InstallPage />}
-            {page === 'backups' && <BackupsPage />}
-            {page === 'logs' && <LogsPage />}
-            {showDevTests && page === 'devTests' && <DevTestsPage />}
-            {page === 'settings' && (
-              <SettingsPage onPendingChange={updateSettingsPending} />
-            )}
-          </div>
+          {page === 'home' && <HomePage onNavigate={handleNavigate} onUpdateClick={() => setUpdateModalOpen(true)} />}
+          {page !== 'home' && (
+            <div className="page">
+              {page === 'install' && <InstallPage />}
+              {page === 'backups' && <BackupsPage />}
+              {page === 'logs' && <LogsPage />}
+              {showDevTests && page === 'devTests' && <DevTestsPage />}
+              {page === 'settings' && (
+                <SettingsPage onPendingChange={updateSettingsPending} />
+              )}
+            </div>
+          )}
         </main>
       </div>
-      {updateModalOpen && (
-        <div className="modal-backdrop" onClick={() => setUpdateModalOpen(false)}>
-          <div className="modal-panel" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Application updates</h3>
-              <button onClick={() => setUpdateModalOpen(false)}>✕</button>
-            </div>
-            <div style={{ padding: '20px', color: 'var(--text-muted)', fontSize: '13px' }}>
-              TODO
-            </div>
-          </div>
-        </div>
-      )}
+      <UpdateModal open={updateModalOpen} onClose={() => setUpdateModalOpen(false)} />
     </div>
   );
 }

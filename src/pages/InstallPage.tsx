@@ -16,143 +16,116 @@ import type {
   PatchFlowResult,
   UserOptions,
 } from "../api";
+import "../css/InstallPage.css";
 
 const DISCORD_PROCESS_ORDER = ["discord", "discordptb", "discordcanary"] as const;
 
 const FLOW_STEPS: { id: keyof PatchFlowResult; title: string; description: string }[] = [
-  {
-    id: "closeDiscord",
-    title: "Close Discord",
-    description: "Stops running clients so files can be updated safely",
-  },
-  {
-    id: "backup",
-    title: "Backup Vencord",
-    description: "Copies your current Vencord files to a backup folder",
-  },
-  {
-    id: "syncRepo",
-    title: "Sync repository",
-    description: "Clones or updates the configured Vencord repository",
-  },
-  {
-    id: "build",
-    title: "Build files",
-    description: "Builds the latest Vencord artifacts",
-  },
-  {
-    id: "inject",
-    title: "Inject Vencord",
-    description: "Installs the patched files into the selected Discord client(s)",
-  },
-  {
-    id: "downloadThemes",
-    title: "Download themes",
-    description: "Fetches a set of community themes into your Vencord folder",
-  },
-  {
-    id: "reopenDiscord",
-    title: "Reopen Discord",
-    description: "Starts Discord again after patching completes",
-  },
+  { id: "closeDiscord",    title: "Close Discord",    description: "Stops running clients so files can be updated safely" },
+  { id: "backup",          title: "Backup Vencord",   description: "Copies your current Vencord files to a backup folder" },
+  { id: "syncRepo",        title: "Sync repository",  description: "Clones or updates the configured Vencord repository" },
+  { id: "build",           title: "Build files",      description: "Builds the latest Vencord artifacts" },
+  { id: "inject",          title: "Inject Vencord",   description: "Installs the patched files into the selected Discord client(s)" },
+  { id: "downloadThemes",  title: "Download themes",  description: "Fetches a set of community themes into your Vencord folder" },
+  { id: "reopenDiscord",   title: "Reopen Discord",   description: "Starts Discord again after patching completes" },
 ];
 
 type StepVisualStatus = FlowStepStatus | "idle";
-
-type StepState = {
-  status: StepVisualStatus;
-  message: string;
-};
-
+type StepState = { status: StepVisualStatus; message: string };
 type StepStateMap = Record<keyof PatchFlowResult, StepState>;
 
 const normalizeProcessName = (name: string) => name.toLowerCase().replace(/\.exe$/, "");
 
 const buildInitialSteps = (): StepStateMap =>
-  FLOW_STEPS.reduce(
-    (acc, step) => ({
-      ...acc,
-      [step.id]: { status: "idle", message: "Waiting to run" },
-    }),
-    {} as StepStateMap
-  );
+  FLOW_STEPS.reduce((acc, step) => ({ ...acc, [step.id]: { status: "idle", message: step.description } }), {} as StepStateMap);
 
 const buildRunningSteps = (): StepStateMap => {
   const base = buildInitialSteps();
   const first = FLOW_STEPS[0]?.id;
-
-  if (first) {
-    base[first] = { status: "running", message: "Running installer workflow..." };
-  }
-
+  if (first) base[first] = { status: "running", message: "Running..." };
   return base;
 };
 
-const describeStep = (
-  stepId: keyof PatchFlowResult,
-  result?: FlowStepResult<unknown>
-): string => {
-  if (!result) {
-    return "Not started";
-  }
-
-  if (result.message) {
-    return result.message;
-  }
-
+const describeStep = (stepId: keyof PatchFlowResult, result?: FlowStepResult<unknown>): string => {
+  if (!result) return "Not started";
+  if (result.message) return result.message;
   switch (stepId) {
     case "closeDiscord": {
       const detail = result.detail as string[] | undefined;
-      if (result.status === "skipped") return "Closing Discord was skipped";
-      if (detail?.length) return `Closed ${detail.length} client(s): ${detail.join(", ")}`;
-      return "No running Discord clients were closed";
+      if (result.status === "skipped") return "Skipped";
+      return detail?.length ? `Closed ${detail.length} client(s)` : "No running clients closed";
     }
     case "backup": {
-      const detail = result.detail as
-        | { sourcePath?: string; backupPath?: string; closingSkipped?: boolean }
-        | undefined;
-      if (result.status === "skipped") return "Backup step was skipped";
-      if (detail?.sourcePath && detail?.backupPath) {
-        return `Backed up ${detail.sourcePath} to ${detail.backupPath}`;
-      }
-      return "Backup completed";
+      const detail = result.detail as { sourcePath?: string; backupPath?: string } | undefined;
+      if (result.status === "skipped") return "Skipped";
+      return detail?.backupPath ? `Saved to ${detail.backupPath}` : "Backup completed";
     }
-    case "syncRepo": {
-      const detail = result.detail as string | undefined;
-      return detail ? `Repository synced at ${detail}` : "Repository sync completed";
-    }
-    case "build": {
-      const detail = result.detail as string | undefined;
-      return detail || "Build completed";
-    }
-    case "inject": {
-      const detail = result.detail as string | undefined;
-      return detail || "Injected Vencord into Discord";
-    }
-    case "downloadThemes": {
-      const detail = result.detail as string | undefined;
-      return detail || "Downloaded themes";
-    }
+    case "syncRepo": return (result.detail as string | undefined) ? `Synced at ${result.detail}` : "Repository synced";
+    case "build":
+    case "inject":         return (result.detail as string | undefined) || `${stepId} completed`;
+    case "downloadThemes": return (result.detail as string | undefined) || "Themes downloaded";
     case "reopenDiscord": {
       const detail = result.detail as string[] | undefined;
-      if (result.status === "skipped") return "Reopening Discord was skipped";
-      if (detail?.length) return `Restarted ${detail.length} client(s)`;
-      return "Discord restarted";
+      if (result.status === "skipped") return "Skipped";
+      return detail?.length ? `Restarted ${detail.length} client(s)` : "Restarted";
     }
-    default:
-      return "Step completed";
+    default: return "Completed";
   }
 };
 
 const mapFlowToSteps = (result: PatchFlowResult): StepStateMap =>
   FLOW_STEPS.reduce((acc, step) => {
-    const stepResult = result[step.id];
-    acc[step.id] = {
-      status: stepResult?.status ?? "pending",
-      message: describeStep(step.id, stepResult),
-    };
+    const r = result[step.id];
+    acc[step.id] = { status: r?.status ?? "pending", message: describeStep(step.id, r) };
     return acc;
   }, {} as StepStateMap);
+
+const isDiscordRunning = (install: DiscordInstall, processes: DiscordProcess[]): boolean => {
+  const path = install.path.toLowerCase();
+  return processes.some(
+    (p) =>
+      (p.exe && p.exe.toLowerCase().startsWith(path)) ||
+      p.name.toLowerCase().replace(/[^a-z]/g, "").includes(install.id.toLowerCase().replace(/[^a-z]/g, ""))
+  );
+};
+
+const stepBadgeLabel = (status: StepVisualStatus): string => {
+  switch (status) {
+    case "idle":      return "Waiting";
+    case "pending":   return "Pending";
+    case "running":   return "Running";
+    case "completed": return "Done";
+    case "failed":    return "Failed";
+    case "skipped":   return "Skipped";
+    default:          return status;
+  }
+};
+
+const stepBadgeCls = (status: StepVisualStatus): string => {
+  switch (status) {
+    case "running":   return "running";
+    case "completed": return "done";
+    case "failed":    return "failed";
+    case "skipped":   return "skipped";
+    default:          return "idle";
+  }
+};
+
+const stepCardCls = (status: StepVisualStatus): string => {
+  switch (status) {
+    case "running":   return "pipe-step running";
+    case "completed": return "pipe-step done";
+    case "failed":    return "pipe-step failed";
+    default:          return "pipe-step";
+  }
+};
+
+const stepNumContent = (index: number, status: StepVisualStatus): string => {
+  if (status === "completed") return "✓";
+  if (status === "failed")    return "✕";
+  if (status === "skipped")   return "-";
+  return String(index + 1);
+};
 
 export default function InstallPage() {
   const [installs, setInstalls] = useState<DiscordInstall[]>([]);
@@ -161,8 +134,6 @@ export default function InstallPage() {
   const [userOptions, setUserOptions] = useState<UserOptions | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [openClients, setOpenClients] = useState<DiscordProcess[]>([]);
-  const [processError, setProcessError] = useState<string | null>(null);
-  const [processLoading, setProcessLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [flowError, setFlowError] = useState<string | null>(null);
   const [stepStates, setStepStates] = useState<StepStateMap>(buildInitialSteps);
@@ -171,88 +142,44 @@ export default function InstallPage() {
     const load = async () => {
       setError(null);
       setLoading(true);
-
       try {
-        const [installsData, optionsData] = await Promise.all([
-          getDiscordInstalls(),
-          getUserOptions(),
-        ]);
-
+        const [installsData, optionsData] = await Promise.all([getDiscordInstalls(), getUserOptions()]);
         setInstalls(installsData);
         setUserOptions(optionsData);
-
-        const selectedFromOptions = installsData
-          .filter((inst) => optionsData.selectedDiscordClients.includes(inst.id))
-          .map((inst) => inst.id);
-
-        if (selectedFromOptions.length > 0) {
-          setSelectedIds(selectedFromOptions);
-        } else {
-          const stable = installsData.find((d) => d.id === "stable");
-          setSelectedIds(stable ? [stable.id] : []);
-        }
+        const fromOptions = installsData.filter((i) => optionsData.selectedDiscordClients.includes(i.id)).map((i) => i.id);
+        setSelectedIds(fromOptions.length > 0 ? fromOptions : installsData.find((d) => d.id === "stable") ? ["stable"] : []);
       } catch (err) {
         setError(String(err));
       } finally {
         setLoading(false);
       }
     };
-
     void load();
   }, []);
 
-  const refreshOpenClients = () => {
-    setProcessError(null);
-    setProcessLoading(true);
-
+  useEffect(() => {
     listDiscordProcesses()
       .then((clients) => {
-        const uniqueByType = new Map<string, DiscordProcess>();
-
-        for (const client of clients) {
-          const normalized = normalizeProcessName(client.name);
-
-          if (!uniqueByType.has(normalized)) {
-            uniqueByType.set(normalized, client);
-          }
+        const seen = new Map<string, DiscordProcess>();
+        for (const c of clients) {
+          const n = normalizeProcessName(c.name);
+          if (!seen.has(n)) seen.set(n, c);
         }
-
-        const ordered = Array.from(uniqueByType.values()).sort((a, b) => {
-          const aName = normalizeProcessName(a.name);
-          const bName = normalizeProcessName(b.name);
-
-          const aIndex = DISCORD_PROCESS_ORDER.indexOf(
-            aName as (typeof DISCORD_PROCESS_ORDER)[number]
-          );
-          const bIndex = DISCORD_PROCESS_ORDER.indexOf(
-            bName as (typeof DISCORD_PROCESS_ORDER)[number]
-          );
-
-          const normalizedAIndex = aIndex === -1 ? DISCORD_PROCESS_ORDER.length : aIndex;
-          const normalizedBIndex = bIndex === -1 ? DISCORD_PROCESS_ORDER.length : bIndex;
-
-          return normalizedAIndex - normalizedBIndex;
+        const ordered = [...seen.values()].sort((a, b) => {
+          const ai = DISCORD_PROCESS_ORDER.indexOf(normalizeProcessName(a.name) as typeof DISCORD_PROCESS_ORDER[number]);
+          const bi = DISCORD_PROCESS_ORDER.indexOf(normalizeProcessName(b.name) as typeof DISCORD_PROCESS_ORDER[number]);
+          return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
-
         setOpenClients(ordered);
       })
-      .catch((err) => setProcessError(String(err)))
-      .finally(() => setProcessLoading(false));
-  };
-
-  useEffect(() => {
-    refreshOpenClients();
+      .catch(() => {});
   }, []);
 
-  const persistSelectedClients = (nextSelected: string[]) => {
+  const persistSelectedClients = (next: string[]) => {
     if (!userOptions) return;
-
-    const nextOptions = { ...userOptions, selectedDiscordClients: nextSelected };
-    setUserOptions(nextOptions);
-
-    updateUserOptions(nextOptions)
-      .then((updated) => setUserOptions(updated))
-      .catch((err) => setError(String(err)));
+    const opts = { ...userOptions, selectedDiscordClients: next };
+    setUserOptions(opts);
+    updateUserOptions(opts).then(setUserOptions).catch((e) => setError(String(e)));
   };
 
   const toggle = (id: string) => {
@@ -263,191 +190,123 @@ export default function InstallPage() {
     });
   };
 
-  const selectedInstalls = useMemo(
-    () => installs.filter((inst) => selectedIds.includes(inst.id)),
-    [installs, selectedIds]
-  );
+  const selectedInstalls = useMemo(() => installs.filter((i) => selectedIds.includes(i.id)), [installs, selectedIds]);
 
   const runWorkflow = async () => {
-    if (selectedInstalls.length === 0) return;
-
+    if (selectedInstalls.length === 0 || isRunning) return;
     setFlowError(null);
     setIsRunning(true);
     setStepStates(buildRunningSteps());
-
     let unlisten: UnlistenFn | null = null;
-
     try {
       unlisten = await listen<PatchFlowStepEvent>("patch-flow-step", (event) => {
         const payload = event.payload;
-
         if (!payload) return;
-
         setStepStates((prev) => {
           const updated = { ...prev } as StepStateMap;
           const { step, ...result } = payload;
-
-          updated[step] = {
-            status: result.status,
-            message: result.message || describeStep(step, result),
-          };
-          
+          updated[step] = { status: result.status, message: result.message || describeStep(step, result) };
           return updated;
-        })
-      })
-
+        });
+      });
       const result = await runPatchFlow();
       setStepStates(mapFlowToSteps(result));
     } catch (err) {
       setFlowError(String(err));
       setStepStates(buildInitialSteps());
     } finally {
-      if (unlisten) {
-        await unlisten();
-      }
-
+      if (unlisten) await unlisten();
       setIsRunning(false);
     }
   };
 
   return (
-    <section className="install-section">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">Installer workflow</p>
-          <h2>Install / Repair Vencord</h2>
-          <p className="muted">
-            Run the full patcher pipeline in one click. The installer will close Discord,
-            back up your files, sync the repository, build, inject, download themes, and finally reopen
-            your client.
-          </p>
+    <section>
+      <div style={{ marginBottom: "1rem" }}>
+        <div className="page-heading">Install</div>
+        <div style={{ fontSize: "0.6875rem", color: "var(--text-faint)", marginTop: "2px" }}>
+          Select your Discord clients and run the install pipeline.
         </div>
       </div>
 
-      <div className="install-grid">
-        <div className="stack">
-          <div className="card">
-            <div className="card-header">
-              <h3>Detected Discord clients</h3>
-              <span className="muted small">{loading ? "Scanning..." : `${installs.length} found`}</span>
-            </div>
+      {error && <p className="error" style={{ marginBottom: "0.75rem", fontSize: "0.75rem" }}>{error}</p>}
+      {flowError && <p className="error" style={{ marginBottom: "0.75rem", fontSize: "0.75rem" }}>{flowError}</p>}
 
-            {loading && <p>Scanning for Discord installs...</p>}
-            {error && <p className="error">Error: {error}</p>}
-            {!loading && installs.length === 0 && !error && (
-              <p>No Discord installations found.</p>
-            )}
-
-            <ul className="install-list rich-list">
-              {installs.map((inst) => (
-                <li key={inst.id} className={selectedIds.includes(inst.id) ? "selected" : ""}>
-                  <label className="install-tile">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(inst.id)}
-                      onChange={() => toggle(inst.id)}
-                    />
-                    <div className="install-meta">
-                      <div className="install-name-row">
-                        <span className="install-name">{inst.name}</span>
-                        {selectedIds.includes(inst.id) && <span className="pill">Target</span>}
-                      </div>
-                      <span className="install-path">{inst.path}</span>
-                    </div>
-                  </label>
-                </li>
-              ))}
-            </ul>
+      <div className="install-grid install-grid--full">
+        <div className="panel">
+          <div className="panel-header">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            Discord Clients
           </div>
 
-          <div className="card">
-            <div className="card-header">
-              <h3>Currently running Discord</h3>
-              <button onClick={refreshOpenClients} disabled={processLoading}>
-                {processLoading ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
-
-            {processLoading && <p>Scanning for running clients...</p>}
-            {!processLoading && processError && (
-              <p className="error">Error: {processError}</p>
+          <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {loading && <p className="muted small">Scanning...</p>}
+            {!loading && installs.length === 0 && !error && (
+              <p className="muted small">No Discord installations found.</p>
             )}
-            {!processLoading && openClients.length === 0 && !processError && (
-              <p className="muted">No Discord processes are currently running</p>
-            )}
-
-            <ul className="install-list rich-list">
-              {openClients.map((proc) => (
-                <li key={normalizeProcessName(proc.name)}>
-                  <div className="install-meta">
-                    <div className="install-name-row">
-                      <span className="install-name">{proc.name}</span>
-                      <span className="pill neutral">PID {proc.pid}</span>
-                    </div>
-                    {proc.exe && <div className="install-path">{proc.exe}</div>}
+            {installs.map((inst) => {
+              const selected = selectedIds.includes(inst.id);
+              const running = isDiscordRunning(inst, openClients);
+              return (
+                <button
+                  key={inst.id}
+                  type="button"
+                  className={`install-client${selected ? " selected" : ""}`}
+                  onClick={() => toggle(inst.id)}
+                  disabled={isRunning}
+                >
+                  <div className="install-check">
+                    <div className="install-check-mark" />
                   </div>
-                </li>
-              ))}
-            </ul>
+                  <div className="install-client-info">
+                    <div className="install-client-name">{inst.name}</div>
+                    <div className="install-client-path">{inst.path}</div>
+                  </div>
+                  <div className={`install-client-dot ${running ? "running" : "stopped"}`} />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="panel-footer">
+            <button
+              type="button"
+              className="install-btn-primary"
+              onClick={() => void runWorkflow()}
+              disabled={isRunning || selectedIds.length === 0}
+            >
+              {isRunning ? "Installing…" : "Install Vencord"}
+            </button>
           </div>
         </div>
 
-        <div className="stack">
-          <div className="card">
-            <div className="card-header">
-              <div>
-                <h3>Full install workflow</h3>
-                <p className="muted small" style={{margin: "4px 0 10px 0"}}>Each step runs in order for the selected Discord client(s).</p>
-              </div>
-              <div className="inline-actions workflow-actions">
-                <div className={`status-pill ${isRunning ? "status-pending" : "status-ready"}`}>
-                  {isRunning ? "Running" : "Standing by"}
+        <div className="panel">
+          <div className="panel-header">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            Pipeline
+          </div>
+
+          <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {FLOW_STEPS.map((step, i) => {
+              const state = stepStates[step.id];
+              return (
+                <div key={step.id} className={stepCardCls(state.status)}>
+                  <div className="pipe-step__num">{stepNumContent(i, state.status)}</div>
+                  <div className="pipe-step__info">
+                    <div className="pipe-step__name">{step.title}</div>
+                    <div className="pipe-step__detail">{state.message}</div>
+                  </div>
+                  <span className={`pipe-step__badge ${stepBadgeCls(state.status)}`}>
+                    {stepBadgeLabel(state.status)}
+                  </span>
                 </div>
-                <button
-                  className="primary"
-                  onClick={runWorkflow}
-                  disabled={isRunning || selectedIds.length === 0}
-                >
-                  {isRunning ? "Running installer..." : "Run full install"}
-                </button>
-              </div>
-            </div>
-
-            {flowError && (
-              <div className="error flow-error">
-                <p>{flowError}</p>
-                <details>
-                  <summary>Technical details</summary>
-                  <p className="muted small">Full diagnostic information has been saved to the run log. Open the Logs page to view it or share the log file for support.</p>
-                </details>
-              </div>
-            )}
-
-            <ol className="flow-steps">
-              {FLOW_STEPS.map((step) => {
-                const state = stepStates[step.id];
-
-                return (
-                  <li key={step.id} className="flow-step">
-                    <div className={`flow-marker status-${state.status}`} aria-hidden>
-                      <span />
-                    </div>
-                    <div className="flow-body">
-                      <div className="flow-row">
-                        <div>
-                          <div className="flow-title">{step.title}</div>
-                          <div className="muted small">{step.description}</div>
-                        </div>
-                        <span className={`pill status-${state.status}`}>
-                          {state.status === "idle" ? "Pending" : state.status === "running" ? "Running" : state.status}
-                        </span>
-                      </div>
-                      <p className="flow-message">{state.message}</p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
+              );
+            })}
           </div>
         </div>
       </div>

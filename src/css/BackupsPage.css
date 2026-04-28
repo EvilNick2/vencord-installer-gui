@@ -1,0 +1,79 @@
+
+.backups-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.backups-name {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.backups-date {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.backups-path {
+  font-size: 0.5625rem;
+  color: var(--text-faint);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.backups-size {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.backups-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.backups-action-btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.backups-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.backups-action-btn.danger {
+  color: var(--error);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.backups-action-btn.danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.backups-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

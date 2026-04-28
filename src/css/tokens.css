@@ -1,6 +1,6 @@
 :root {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 87.5%;
+  font-size: 18px;
   color-scheme: dark;
 
   --nav-height: 3rem;
@@ -71,10 +71,5 @@
   --list-code-size: 12px;
 }
 
-@media (min-resolution: 1.5dppx) {
-  :root { font-size: 100%; }
-}
-
-@media (min-resolution: 2dppx) {
-  :root { font-size: 112.5%; }
-}
+@media (min-resolution: 1.5dppx) { :root { font-size: 19px; } }
+@media (min-resolution: 2dppx)   { :root { font-size: 20px; } }

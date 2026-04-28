@@ -190,72 +190,68 @@ export default function DevTestsPage() {
     <DevTestsErrorBoundary>
       <section>
         <h2>Development tests</h2>
-
-        <div className="card">
-          <h3>Run installer modules individually</h3>
-          <p className="muted">
-            Use this menu to exercise one module at a time without running the entire installer flow.
-          </p>
-
-          <div className="form-field">
-            <label htmlFor="dev-source-path">Source path for backup testing</label>
-            <input
-              id="dev-source-path"
-              className="text-input"
-              type="text"
-              value={sourcePath}
-              onChange={(event) => setSourcePath(event.target.value)}
-              placeholder="/path/to/Vencord"
-            />
-            <small>
-              Only required for the backup module. It should point to the Vencord install you want to move into the
-              backups folder.
-            </small>
+        <div className="install-grid">
+          <div className="stack">
+            <div className="card">
+              <h3>Run installer modules individually</h3>
+              <p className="muted">
+                Exercise one module at a time without running the entire installer flow.
+              </p>
+              <div className="form-field">
+                <label htmlFor="dev-source-path">Source path for backup testing</label>
+                <input
+                  id="dev-source-path"
+                  className="text-input"
+                  type="text"
+                  value={sourcePath}
+                  onChange={(event) => setSourcePath(event.target.value)}
+                  placeholder="/path/to/Vencord"
+                />
+                <small>Only required for the backup module.</small>
+              </div>
+              {error && <p className="error">{error}</p>}
+              <ul className="list">
+                {STEP_DEFINITIONS.map((step) => (
+                  <li key={step.id} className="list-item">
+                    <div className="list-row">
+                      <div className="list-meta">
+                        <span className="list-title">{step.title}</span>
+                        <span className="list-description">{step.description}</span>
+                      </div>
+                      <div>
+                        <button
+                          onClick={() => handleRun(step.id)}
+                          disabled={runningStep !== null || (step.needsSourcePath && sourcePath.trim().length === 0)}
+                        >
+                          {runningStep === step.id ? "Running..." : "Run"}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          {error && <p className="error">{error}</p>}
-
-          <ul className="list">
-            {STEP_DEFINITIONS.map((step) => (
-              <li key={step.id} className="list-item">
-                <div className="list-row">
-                  <div className="list-meta">
-                    <span className="list-title">{step.title}</span>
-                    <span className="list-description">{step.description}</span>
-                  </div>
-                  <div>
-                    <button
-                      onClick={() => handleRun(step.id)}
-                      disabled={
-                        runningStep !== null || (step.needsSourcePath && sourcePath.trim().length === 0)
-                      }
-                    >
-                      {runningStep === step.id ? "Running..." : "Run"}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="card">
-          <h3>Recent test results</h3>
-          {sortedResults.length === 0 && <p className="muted">No modules have been run yet.</p>}
-
-          <ul className="list">
-            {sortedResults.map((entry) => (
-              <li key={entry.id} className="list-item">
-                <div className="list-row">
-                  <div className="list-meta">
-                    <span className="list-title">{entry.title}</span>
-                    <span className="list-description">{formatTimestamp(entry.timestamp)}</span>
-                    <span>{entry.summary}</span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="stack">
+            <div className="card">
+              <h3>Recent test results</h3>
+              {sortedResults.length === 0 && <p className="muted">No modules have been run yet.</p>}
+              <ul className="list">
+                {sortedResults.map((entry) => (
+                  <li key={entry.id} className="list-item">
+                    <div className="list-row">
+                      <div className="list-meta">
+                        <span className="list-title">{entry.title}</span>
+                        <span className="list-description">{formatTimestamp(entry.timestamp)}</span>
+                        <span>{entry.summary}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
     </DevTestsErrorBoundary>

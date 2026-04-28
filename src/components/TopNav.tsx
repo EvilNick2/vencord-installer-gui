@@ -8,7 +8,6 @@ type TopNavProps = {
   activePage: Page;
   onNavigate: (page: Page) => void;
   showDevTests: boolean;
-  onUpdateClick: () => void;
 };
 
 const navItems: { page: Page; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
@@ -19,7 +18,7 @@ const navItems: { page: Page; label: string; Icon: React.ComponentType<{ size?: 
   { page: 'settings', label: 'Settings',Icon: Settings },
 ];
 
-export default function TopNav({ activePage, onNavigate, showDevTests, onUpdateClick }: TopNavProps) {
+export default function TopNav({ activePage, onNavigate, showDevTests }: TopNavProps) {
   return (
     <nav className="app-nav top-nav">
       <div className="top-nav__brand">
@@ -51,12 +50,6 @@ export default function TopNav({ activePage, onNavigate, showDevTests, onUpdateC
             Dev
           </button>
         )}
-      </div>
-
-      <div className="top-nav__actions">
-        <button type="button" className="top-nav__update-btn" onClick={onUpdateClick}>
-          Updates
-        </button>
       </div>
     </nav>
   );
