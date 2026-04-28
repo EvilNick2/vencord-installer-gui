@@ -71,7 +71,6 @@ export default function UpdateModal({ open, onClose }: UpdateModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [releaseHistory, setReleaseHistory] = useState<ReleaseEntry[]>([]);
   const [releaseLoading, setReleaseLoading] = useState(false);
-  const [releaseError, setReleaseError] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -87,7 +86,6 @@ export default function UpdateModal({ open, onClose }: UpdateModalProps) {
 
   const fetchReleaseHistory = useCallback(async () => {
     setReleaseLoading(true);
-    setReleaseError(null);
     try {
       const res = await fetch(RELEASES_ENDPOINT, { headers: { Accept: "application/vnd.github+json" } });
       if (!res.ok) throw new Error(`Could not fetch release history (${res.status})`);
@@ -97,8 +95,8 @@ export default function UpdateModal({ open, onClose }: UpdateModalProps) {
           .filter((r) => !r.draft && !r.prerelease)
           .map((r) => ({ id: r.id, version: r.tag_name || r.name || "Unknown", date: r.published_at, notes: r.body || undefined, url: r.html_url }))
       );
-    } catch (err) {
-      setReleaseError(String(err));
+    } catch {
+      // release notes are best-effort; silently ignore fetch failures
     } finally {
       setReleaseLoading(false);
     }
@@ -114,7 +112,6 @@ export default function UpdateModal({ open, onClose }: UpdateModalProps) {
       if (!result) {
         setUpdate(null);
         setReleaseHistory([]);
-        setReleaseError(null);
         setStatus("upToDate");
         setStatusMessage("You're running the latest version");
         return;

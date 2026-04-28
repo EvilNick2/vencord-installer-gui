@@ -60,7 +60,7 @@ export type DiscordProcess = {
   cmd: string[];
 };
 
-export type FlowStepStatus = "running" | "completed" | "skipped" | "pending";
+export type FlowStepStatus = "running" | "completed" | "skipped" | "pending" | "failed";
 
 export type FlowStepResult<T = unknown> = {
   status: FlowStepStatus;
