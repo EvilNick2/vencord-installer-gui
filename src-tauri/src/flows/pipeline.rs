@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::{discord, options, run_log};
+use crate::{command_utils, discord, options, run_log};
 use crate::run_log::RunStep;
 use tauri::Emitter;
 
@@ -143,6 +143,88 @@ fn resolve_selected_discord_locations(selected_ids: &[String]) -> Result<Vec<Str
   if !missing.is_empty() {
     return Err(format!(
       "The following Discord client selections are not installed: {}",
+      missing.join(", ")
+    ));
+  }
+
+  Ok(locations)
+}
+
+fn variant_id_from_cli_path(path: &str) -> Option<&'static str> {
+  if path.contains("discordcanary") || path.contains("DiscordCanary") {
+    Some("canary")
+  } else if path.contains("discordptb") || path.contains("DiscordPTB") {
+    Some("ptb")
+  } else if path.contains("discord") || path.contains("Discord") {
+    Some("stable")
+  } else {
+    None
+  }
+}
+
+fn detect_discord_installs_via_cli(repo_dir: &str) -> Vec<(String, String)> {
+  for candidate in command_utils::command_candidates("pnpm") {
+    let Ok(output) = command_utils::build_command(&candidate)
+      .args(["inject", "--debug"])
+      .current_dir(repo_dir)
+      .stdin(std::process::Stdio::null())
+      .output()
+    else {
+      continue;
+    };
+
+    let mut results: Vec<(String, String)> = Vec::new();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    for line in stdout.lines().chain(stderr.lines()) {
+      if let Some(rest) = line.strip_prefix("DEBUG Found Discord install at") {
+        let path = rest.trim().to_string();
+        if path.is_empty() {
+          continue;
+        }
+        if let Some(id) = variant_id_from_cli_path(&path) {
+          if !results.iter().any(|(eid, _)| eid == id) {
+            results.push((id.to_string(), path));
+          }
+        }
+      }
+    }
+
+    return results;
+  }
+
+  Vec::new()
+}
+
+fn resolve_inject_locations(selected_ids: &[String], repo_dir: &str) -> Result<Vec<String>, String> {
+  if selected_ids.is_empty() {
+    return Ok(Vec::new());
+  }
+
+  let cli_detected = detect_discord_installs_via_cli(repo_dir);
+
+  if cli_detected.is_empty() {
+    log::info!("[inject] CLI detection returned no results, falling back to static detection");
+    return resolve_selected_discord_locations(selected_ids);
+  }
+
+  log::info!("[inject] CLI detected {} install(s)", cli_detected.len());
+
+  let mut locations = Vec::new();
+  let mut missing = Vec::new();
+
+  for id in selected_ids {
+    if let Some((_, path)) = cli_detected.iter().find(|(cid, _)| cid == id) {
+      locations.push(path.clone());
+    } else {
+      missing.push(id.clone());
+    }
+  }
+
+  if !missing.is_empty() {
+    return Err(format!(
+      "The following Discord client selections were not found by the installer: {}",
       missing.join(", ")
     ));
   }
@@ -496,7 +578,8 @@ pub async fn run_patch_flow(app: tauri::AppHandle) -> Result<PatchFlowResult, St
 
   let inject_locations = match run_blocking({
     let selected = options.selected_discord_clients.clone();
-    move || resolve_selected_discord_locations(&selected)
+    let sync = sync_path.clone();
+    move || resolve_inject_locations(&selected, &sync)
   })
   .await
   {
@@ -743,7 +826,7 @@ pub fn run_dev_test(
     }
     DevTestStep::Inject => {
       let options = options::read_user_options()?;
-      let locations = resolve_selected_discord_locations(&options.selected_discord_clients)?;
+      let locations = resolve_inject_locations(&options.selected_discord_clients, &options.vencord_repo_dir)?;
 
       if locations.is_empty() {
         return Ok(DevTestResult::Inject {
