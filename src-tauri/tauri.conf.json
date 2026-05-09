@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' tauri: asset:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' tauri: asset: https://api.github.com"
+      "csp": "default-src 'self' tauri: asset:; img-src 'self' data: tauri: asset:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' tauri: asset: https://api.github.com"
     }
   },
   "bundle": {
