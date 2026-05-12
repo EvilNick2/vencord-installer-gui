@@ -160,7 +160,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "## What's New\n\n- **Better Discord location detection**: The installer now asks the Vencord CLI where Discord lives rather than having a list of hard-coded directories\n- **Windows administrator requirement**: The app now requires administrator privileges on Windows to prevent permission errors during Vencord install\n\n## Bug Fixes\n\n### Backups\n\n- Fixed a no-unused-expressions link error in toggleSelection\n\n### Security\n\n- Added img-src to CSP so data: URIs render correctly in production builds, such as the client selection checkmark on install page"
+          releaseBody: "## What's New\n\n- **Better Discord location detection**: The installer now asks the Vencord CLI where Discord lives rather than having a list of hard-coded directories\n- **Windows administrator requirement**: The app now requires administrator privileges on Windows to prevent permission errors during Vencord install\n\n## Bug Fixes\n\n### Backups\n\n- Fixed a no-unused-expressions link error in toggleSelection\n\n### Security\n\n- Added img-src to CSP so data: URIs render correctly in production builds, such as the client selection checkmark on install page\n\n### Windows\n\n- Fix duplicate VERSION resource linker error"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
