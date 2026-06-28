@@ -307,33 +307,48 @@ pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<(Stri
   }
 
   check_tool("pnpm", &["--version"], "pnpm")?;
-  let mut per_location_details = Vec::new();
 
+  let mut unique_locations: Vec<String> = Vec::new();
   for location in locations {
-    ensure_inject_location_writable(location)?;
+    if !unique_locations.contains(location) {
+      unique_locations.push(location.clone());
+    }
+  }
 
-    let (stdout, stderr) = run_command(
+  let total = unique_locations.len();
+  let mut succeeded = Vec::new();
+  let mut succeeded_details = Vec::new();
+  let mut failed = Vec::new();
+
+  for location in &unique_locations {
+    if let Err(err) = ensure_inject_location_writable(location) {
+      failed.push(format!("- {location}: {err}"));
+      continue;
+    }
+
+    let (stdout, stderr) = match run_command(
       "pnpm",
       &["inject", "-location", location],
       Some(repo_dir),
       &format!("Failed to inject Vencord into {location} with pnpm"),
-    )?;
+    ) {
+      Ok(output) => output,
+      Err(err) => {
+        failed.push(format!("- {location}: {err}"));
+        continue;
+      }
+    };
 
     if output_indicates_inject_failure(&stdout, &stderr) {
-      return Err(format!(
-        "Injection command reported failure for {location}. Stdout: {}\n Stderr: {}",
-        if stdout.is_empty() {
-          "<empty>"
-        } else {
-          &stdout
-        },
-        if stderr.is_empty() {
-          "<empty>"
-        } else {
-          &stderr
-        }
+      failed.push(format!(
+        "- {location}: injection command reported failure. stdout: {} | stderr: {}",
+        if stdout.is_empty() { "<empty>" } else { &stdout },
+        if stderr.is_empty() { "<empty>" } else { &stderr },
       ));
+      continue;
     }
+
+    succeeded.push(location.clone());
 
     let mut detail_lines = vec![format!("- location: {location}")];
 
@@ -345,17 +360,41 @@ pub fn inject_vencord_repo(repo_dir: &str, locations: &[String]) -> Result<(Stri
       detail_lines.push(format!("  stderr: {stderr}"))
     }
 
-    per_location_details.push(detail_lines.join("\n"))
+    succeeded_details.push(detail_lines.join("\n"))
   }
 
-  let verbose = format!(
-    "Injected {} location(s):\n{}",
-    locations.len(),
-    per_location_details.join("\n")
+  if succeeded.is_empty() {
+    return Err(format!(
+      "Failed to inject Vencord into any of the {total} selected Discord location(s):\n{}",
+      failed.join("\n")
+    ));
+  }
+
+  let mut verbose = format!(
+    "Injected {} of {} location(s):\n{}",
+    succeeded.len(),
+    total,
+    succeeded_details.join("\n")
   );
 
-  Ok((
-    format!("Injected Vencord into {} Discord client(s)", locations.len()),
-    verbose,
-  ))
+  if !failed.is_empty() {
+    verbose.push_str(&format!(
+      "\nSkipped {} location(s) that could not be patched:\n{}",
+      failed.len(),
+      failed.join("\n")
+    ));
+  }
+
+  let message = if failed.is_empty() {
+    format!("Injected Vencord into {} Discord client(s)", succeeded.len())
+  } else {
+    format!(
+      "Injected Vencord into {} of {} Discord client(s); {} skipped (see log)",
+      succeeded.len(),
+      total,
+      failed.len()
+    )
+  };
+
+  Ok((message, verbose))
 }

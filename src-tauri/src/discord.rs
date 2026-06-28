@@ -30,15 +30,17 @@ fn resolve_candidate_path(path: &Path) -> Option<PathBuf> {
 
 fn add_candidates(installs: &mut Vec<DiscordInstall>, candidates: &[(&str, &str, PathBuf)]) {
   for (id, name, path) in candidates {
-    if installs.iter().any(|install| install.id == *id) {
-      continue;
-    }
-
     if let Some(resolved_path) = resolve_candidate_path(path) {
+      let resolved = resolved_path.to_string_lossy().into_owned();
+
+      if installs.iter().any(|install| install.path == resolved) {
+        continue;
+      }
+
       installs.push(DiscordInstall {
         id: (*id).to_string(),
         name: (*name).to_string(),
-        path: resolved_path.to_string_lossy().into_owned(),
+        path: resolved,
       });
     }
   }
@@ -253,7 +255,23 @@ fn detect_discord_installs() -> Vec<DiscordInstall> {
   installs
 }
 
+pub fn detect_all_installs() -> Vec<DiscordInstall> {
+  detect_discord_installs()
+}
+
 #[tauri::command]
 pub fn get_discord_installs() -> Vec<DiscordInstall> {
-  detect_discord_installs()
+  let mut seen_ids: Vec<String> = Vec::new();
+
+  detect_all_installs()
+    .into_iter()
+    .filter(|install| {
+      if seen_ids.iter().any(|id| id == &install.id) {
+        false
+      } else {
+        seen_ids.push(install.id.clone());
+        true
+      }
+    })
+    .collect()
 }

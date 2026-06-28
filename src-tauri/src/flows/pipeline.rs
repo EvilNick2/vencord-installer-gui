@@ -128,15 +128,25 @@ fn resolve_selected_discord_locations(selected_ids: &[String]) -> Result<Vec<Str
     return Ok(Vec::new());
   }
 
-  let installs = discord::get_discord_installs();
+  let installs = discord::detect_all_installs();
   let mut locations = Vec::new();
   let mut missing = Vec::new();
 
   for id in selected_ids {
-    if let Some(install) = installs.iter().find(|inst| &inst.id == id) {
-      locations.push(install.path.clone());
-    } else {
+    let matched: Vec<String> = installs
+      .iter()
+      .filter(|inst| &inst.id == id)
+      .map(|inst| inst.path.clone())
+      .collect();
+
+    if matched.is_empty() {
       missing.push(id.clone());
+    } else {
+      for path in matched {
+        if !locations.contains(&path) {
+          locations.push(path);
+        }
+      }
     }
   }
 
@@ -173,28 +183,33 @@ fn detect_discord_installs_via_cli(repo_dir: &str) -> Vec<(String, String)> {
       continue;
     };
 
-    let mut results: Vec<(String, String)> = Vec::new();
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    for line in stdout.lines().chain(stderr.lines()) {
-      if let Some(rest) = line.strip_prefix("DEBUG Found Discord install at") {
-        let path = rest.trim().to_string();
-        if path.is_empty() {
-          continue;
-        }
-        if let Some(id) = variant_id_from_cli_path(&path) {
-          if !results.iter().any(|(eid, _)| eid == id) {
-            results.push((id.to_string(), path));
-          }
-        }
-      }
-    }
-
-    return results;
+    return parse_cli_detected_installs(&stdout, &stderr);
   }
 
   Vec::new()
+}
+
+fn parse_cli_detected_installs(stdout: &str, stderr: &str) -> Vec<(String, String)> {
+  let mut results: Vec<(String, String)> = Vec::new();
+
+  for line in stdout.lines().chain(stderr.lines()) {
+    if let Some(rest) = line.strip_prefix("DEBUG Found Discord install at") {
+      let path = rest.trim().to_string();
+      if path.is_empty() {
+        continue;
+      }
+      if let Some(id) = variant_id_from_cli_path(&path) {
+        if !results.iter().any(|(_, epath)| epath == &path) {
+          results.push((id.to_string(), path));
+        }
+      }
+    }
+  }
+
+  results
 }
 
 fn resolve_inject_locations(selected_ids: &[String], repo_dir: &str) -> Result<Vec<String>, String> {
@@ -215,10 +230,20 @@ fn resolve_inject_locations(selected_ids: &[String], repo_dir: &str) -> Result<V
   let mut missing = Vec::new();
 
   for id in selected_ids {
-    if let Some((_, path)) = cli_detected.iter().find(|(cid, _)| cid == id) {
-      locations.push(path.clone());
-    } else {
+    let matched: Vec<String> = cli_detected
+      .iter()
+      .filter(|(cid, _)| cid == id)
+      .map(|(_, path)| path.clone())
+      .collect();
+
+    if matched.is_empty() {
       missing.push(id.clone());
+    } else {
+      for path in matched {
+        if !locations.contains(&path) {
+          locations.push(path);
+        }
+      }
     }
   }
 
