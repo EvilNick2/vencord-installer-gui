@@ -160,7 +160,7 @@ jobs:
         with:
           tagName: ${{ steps.release_tag.outputs.value }}
           releaseName: "Vencord Installer GUI v__VERSION__"
-          releaseBody: "## Bug Fixes\n\n### Manifest\n\n- Add Common Controls v6 dependency to resolve TaskDialogIndirect error on windows"
+          releaseBody: "## What's New\n\n- **Inject into every install of a branch**: When more than one install of the same Discord branch exists (for example a system `/opt/discord` and a self-updating `~/.config/discord`), Vencord is now injected into all of them instead of only the first one detected\n- **Resilient injection**: Injecting into multiple locations is now best-effort, a location that can't be patched (e.g. a read-only system install) is skipped with a warning instead of failing the whole install, and any skipped locations are recorded in the run log\n\n## Bug Fixes\n\n### Injection\n\n- Fixed the installer reporting a successful injection while Vencord never loaded after Discord restarted, caused by detection collapsing multiple installs of the same branch down to the first one found\n- Discord installs are now deduplicated by resolved path instead of by branch, so distinct installs of the same branch are all retained for injection\n- Skipped locations and per-location failures are now surfaced in the run log"
           includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
