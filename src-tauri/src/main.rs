@@ -11,8 +11,12 @@ mod options;
 mod run_log;
 
 fn main() {
+  // WebKitGTK's DMA-BUF buffers die with Wayland protocol error 71 on NVIDIA.
+  // Shared memory hands over the frames instead and keeps GPU rendering.
   #[cfg(target_os = "linux")]
-  std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+  if std::env::var_os("WEBKIT_DMABUF_RENDERER_FORCE_SHM").is_none() {
+    std::env::set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1");
+  }
 
   logging::with_tauri_logger(
     tauri::Builder::default()
